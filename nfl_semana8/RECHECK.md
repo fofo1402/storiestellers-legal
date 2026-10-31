@@ -1,5 +1,8 @@
 # Recheck final · NFL 2026 Semana 8
 
+**Actualización:** el modelo final usa TODOS los juegos de 2026 por igual (sin ponderar los recientes) y los RB incluyen yardas recibidas. Búsqueda repetida (30,000 combinaciones + validación por semana) sobre 11,543 predicciones: error 0.2019 vs 0.2048 sin ajustes; acierta el lado 68.2% (74.2% con prob. ≥60% o ≤40%). Parámetros en scripts/model6_params.json. Kyler Murray juega según el reporte final oficial de los Vikings del 30-oct (solo Jay Ward en duda). Favoritos: 14 (Alta: Kyler Murray, Chris Godwin Jr.).
+
+
 Corrida del sábado 31-oct-2026 (madrugada, hora Monterrey). Lesiones: reporte final del viernes 30-oct (CHI-SEA pendiente; sale el sábado).
 
 ## Cómo se eligió el modelo

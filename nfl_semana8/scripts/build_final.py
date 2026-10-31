@@ -5,7 +5,7 @@ import json, math
 from collections import defaultdict
 from status_w8 import OUT, QUESTIONABLE, FUENTES, TEAM_NAME, OL_OUT_NOW, PENDING_TEAMS
 O = '/home/user/data/'; E = '/home/user/entrega_semana8/'
-RAW = json.load(open(O + 'props2_raw.json')); P2 = json.load(open(O + 'model5_params.json'))
+RAW = json.load(open(O + 'props2_raw.json')); P2 = json.load(open(O + 'model6_params.json'))
 V2 = json.load(open(O + 'props_data_v2.json'))
 OLD = json.load(open(O + 'props_data_v1.json'))
 players = RAW['players']
@@ -29,10 +29,11 @@ RUSHK = {'rush_yds', 'car'}
 def reasons(p, s):
     r = []
     rv = s['rival_indice']; cal = s['calendario_indice']
-    r.append(f"{p['rival']} permite {pcs(rv)} vs. el promedio en {s['etiqueta'].lower()} a {p['pos']} (#{s['rival_rank']} de 32), ya ajustado por las ofensivas que enfrentó; "
+    r.append(f"{p['rival']} permite {pcs(rv)} vs. el promedio en {s['etiqueta'].lower()} a {p['pos']} (#{s['rival_rank']} de 32 que más permite; 1 = la más blanda), ya ajustado por las ofensivas que enfrentó; "
              f"los rivales previos de {surname(p['jugador'])} permitían {pcs(cal)}. Efecto del rival: {pcs(s['f_rival'])}.")
-    u3 = ', '.join(f"{v:.0f}" for v in s['ultimos3'])
-    r.append(f"Forma reciente: últimos 3 juegos {u3} (prom. {s['prom_ult3']:.1f} vs {s['media_temporada']:.1f} en la temporada): {pcs(s['f_forma'])}.")
+    vals = [r_['valor'] for r_ in s['registro']]
+    over = sum(1 for v in vals if v > s['linea_promedio'])
+    r.append(f"Todos sus juegos de 2026: {', '.join(f'{v:.0f}' for v in vals)} (promedio {s['media_temporada']:.1f}); superó esa línea en {over} de {len(vals)}.")
     if abs(s['f_companeros'] - 1) >= 0.03:
         if s['key'] in RUSHK: aus = [a['jugador'] for a in p['factores']['ausentes'] if a['acarreos'] >= 0.15]
         else: aus = [a['jugador'] for a in p['factores']['ausentes'] if a['targets'] >= 0.08]
@@ -46,17 +47,22 @@ def reasons(p, s):
 # ---------- mejor opción por jugador y favoritos por partido ----------
 # Para cada jugador con participación decente (titular o rotación, 3+ juegos) se evalúan TODAS sus estadísticas:
 # probabilidad de superar su propio promedio con el modelo final. "Lo más probable" = la de mayor probabilidad.
-# Una estadística CALIFICA para favorito si: >= 50% de superar su promedio, ajuste total >= +4%, el matchup de ESA estadística
+# Una estadística CALIFICA para favorito si: >= 55% de superar su promedio, ajuste total >= +4%, el matchup de ESA estadística
 # no es Difícil (#22-32) y el rival no le resta (efecto rival >= 0%). Favorito = jugador con al menos una estadística que califica;
-# "lo que más me convence" = la que califica con mayor probabilidad. Alta: esa estadística >= 56%, matchup Favorable (#1-10),
-# sano, 4+ juegos, uso reciente normal y sin mala racha en esa estadística (últimos 3 >= 85% de su promedio).
+# "lo que más me convence" = la que califica con mayor probabilidad. Alta: esa estadística >= 60%, matchup Favorable (#1-10),
+# sano, 4+ juegos y uso reciente normal. Todo con todos los juegos de 2026 (sin ponderar los recientes).
 def decent(p):
     return p['stats'] and p['pj'] >= 3 and p['rol'] in ('Titular', 'Rotación') and main_stat(p)['proyeccion'] >= 0.5 * TH[p['pos']]
 def stat_view(s):
     return dict(stat=s['key'], etiqueta=s['etiqueta'], prob=s['prob_superar_promedio'], linea=s['linea_promedio'], promedio=s['media_temporada'],
-                proyeccion=s['proyeccion'], factor=s['factor_total'], lectura=s['lectura'], rival_rank=s['rival_rank'], ultimos3=s['ultimos3'], prom_ult3=s['prom_ult3'])
+                proyeccion=s['proyeccion'], factor=s['factor_total'], lectura=s['lectura'], rival_rank=s['rival_rank'], juegos=[r_['valor'] for r_ in s['registro']])
 MINS = {'rec_yds': 30, 'rec': 3, 'rush_yds': 40, 'car': 10, 'pass_yds': 150, 'cmp': 12, 'pass_td': 0.5, 'td': 0.5}
-def meaningful(s): return s['media_temporada'] >= MINS[s['key']]
+MINS_RB = {'rec_yds': 15, 'rec': 2}   # en RB las recepciones son secundarias: mínimos propios
+for _p in players:
+    for _s in _p['stats']: _s['pos'] = _p['pos']
+def meaningful(s):
+    m = MINS_RB.get(s['key'], MINS[s['key']]) if s.get('pos') == 'RB' else MINS[s['key']]
+    return s['media_temporada'] >= m
 def qualifies(s):
     return meaningful(s) and s['prob_superar_promedio'] >= 0.55 and s['factor_total'] >= 1.04 and s['lectura'] != 'Difícil' and s['f_rival'] >= 0.995
 fav = defaultdict(list); near = {}; blocked = defaultdict(list)
@@ -73,23 +79,21 @@ for p in players:
         if hot and main_stat(p)['proyeccion'] >= TH[p['pos']]:
             s = hot[0]
             blocked[p['partido']].append(dict(stat_view(s), player_id=p['player_id'], jugador=p['jugador'], pos=p['pos'], equipo=p['equipo'],
-                motivo=f"{s['etiqueta']}: matchup {s['lectura'].lower()} (#{s['rival_rank']} de 32, efecto rival {pcs(s['f_rival'])}); su ventaja viene de "
-                       + ('compañeros ausentes' if s['f_companeros'] > 1.03 else 'su forma reciente' if s['f_forma'] > 1.02 else 'otros factores') + ', no del rival'))
+                motivo=f"{s['etiqueta']}: matchup {s['lectura'].lower()} (#{s['rival_rank']} de 32 que más permite, efecto rival {pcs(s['f_rival'])}); su ventaja viene de "
+                       + ('compañeros ausentes' if s['f_companeros'] > 1.03 else 'otros factores') + ', no del rival'))
         elif rk and rk[0]['lectura'] != 'Difícil' and main_stat(p)['proyeccion'] >= TH[p['pos']]:
             cand = dict(stat_view(rk[0]), player_id=p['player_id'], jugador=p['jugador'], pos=p['pos'], equipo=p['equipo'])
             if near.get(p['partido']) is None or cand['prob'] > near[p['partido']]['prob']: near[p['partido']] = cand
         continue
     s = q[0]
-    cold = s['prom_ult3'] < 0.85 * s['media_temporada']
     missed_last = (not p['jugo_ultimo']) or p['regresa'] or p['snaps_ult3'] < 40
-    alta = s['prob_superar_promedio'] >= 0.60 and s['lectura'] == 'Favorable' and p['estado'] == 'OK' and p['pj'] >= 4 and not missed_last and not cold
+    alta = s['prob_superar_promedio'] >= 0.60 and s['lectura'] == 'Favorable' and p['estado'] == 'OK' and p['pj'] >= 4 and not missed_last
     riesgos = []
     if p['estado'] != 'OK': riesgos.append(p['estado_lesion'])
     if missed_last: riesgos.append('Regresa de lesión: su volumen puede venir limitado.' if (not p['jugo_ultimo'] or p['regresa'])
                                    else f"Uso reciente bajo ({p['snaps_ult3']}% de snaps máx. en los últimos 3 juegos).")
-    if cold: riesgos.append(f"Viene bajo en {s['etiqueta'].lower()}: {s['prom_ult3']:.1f} en sus últimos 3 contra {s['media_temporada']:.1f} de promedio.")
     if p['pj'] < 4: riesgos.append('Muestra corta (menos de 4 juegos).')
-    if s['lectura'] == 'Intermedio': riesgos.append(f"Matchup intermedio en {s['etiqueta'].lower()} (#{s['rival_rank']} de 32), no favorable.")
+    if s['lectura'] == 'Intermedio': riesgos.append(f"Matchup intermedio en {s['etiqueta'].lower()} (#{s['rival_rank']} de 32 que más permite), no favorable.")
     cand = dict(stat_view(s), player_id=p['player_id'], jugador=p['jugador'], pos=p['pos'], equipo=p['equipo'], estado=p['estado'],
                 confianza='Alta' if alta else 'Media', por_que=reasons(p, s), riesgo=' '.join(riesgos),
                 tambien=[stat_view(x) for x in q[1:]])
@@ -163,13 +167,12 @@ for pid, c in prev.items():
     if now: cambios_v2.append(dict(jugador=c['jugador'], antes=c['confianza'], ahora='Favorito ' + now['confianza'], motivo=(now['riesgo'] or 'Se mantiene.')))
     else:
         why = []
-        if m and (m['lectura'] == 'Difícil' or m['f_rival'] < 0.995): why.append(f"matchup {m['lectura'].lower()} (#{m['rival_rank']} de 32, efecto rival {pcs(m['f_rival'])}): su ventaja venía de los compañeros ausentes, no del rival")
-        if m and m['prom_ult3'] < 0.85 * m['media_temporada']: why.append(f"mala racha ({', '.join(f'{v:.0f}' for v in m['ultimos3'])} en sus últimos 3)")
-        if m and m['prob_superar_promedio'] < 0.5: why.append(f"con la forma reciente baja a {m['prob_superar_promedio'] * 100:.1f}% de superar su promedio")
+        if m and (m['lectura'] == 'Difícil' or m['f_rival'] < 0.995): why.append(f"matchup {m['lectura'].lower()} (#{m['rival_rank']} de 32 que más permite, efecto rival {pcs(m['f_rival'])}): su ventaja venía de los compañeros ausentes, no del rival")
+        if m and m['prob_superar_promedio'] < 0.5: why.append(f"baja a {m['prob_superar_promedio'] * 100:.1f}% de superar su promedio")
         if m and m['factor_total'] < 1.04: why.append(f"ajuste total {pcs(m['factor_total'])} (< +4%)")
         cambios_v2.append(dict(jugador=c['jugador'], antes=c['confianza'], ahora='Ya no es favorito', motivo='; '.join(why) or 'No cumple las reglas.'))
 for pid, c in favids.items():
-    if pid not in prev: cambios_v2.append(dict(jugador=c['jugador'], antes='—', ahora='Favorito ' + c['confianza'], motivo='Entra con la forma reciente incluida: ' + f"{c['prob'] * 100:.1f}% de superar su promedio."))
+    if pid not in prev: cambios_v2.append(dict(jugador=c['jugador'], antes='—', ahora='Favorito ' + c['confianza'], motivo='Entra con el modelo final (todos los juegos): ' + f"{c['prob'] * 100:.1f}% de superar su promedio."))
 meta = dict(OLD['metadatos'])
 meta.update(tipo_corrida='RECHECK FINAL', datos_al='lesiones al vie 30-oct · corrida sáb 31-oct',
     recalibracion=P2['cal'], peso_w_probabilidad=P2['w_pass'],

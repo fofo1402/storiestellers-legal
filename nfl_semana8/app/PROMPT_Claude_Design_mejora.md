@@ -50,7 +50,7 @@ Te adjunto `index.html`: "La Línea · NFL Semana 8", una app en español que ya
 
 ## Reglas que NO puedes romper
 
-- **No toques la matemática.** El primer `<script>` (el objeto `window.Props`: `probLlegar`, `etiquetaDificultad`, `probRaw`) se queda tal cual, carácter por carácter. Está verificado contra Python/SciPy en 2,556 casos.
+- **No toques la matemática.** El primer `<script>` (el objeto `window.Props`: `probLlegar`, `etiquetaDificultad`, `probRaw`) se queda tal cual, carácter por carácter. Está verificado contra Python/SciPy en 2,773 casos.
 - **No toques los datos.** El `<script id="data" type="application/json">` se queda igual: sin redondear, filtrar, reordenar ni inventar nada.
 - **No cambies qué se calcula ni cómo.** El % siempre sale de `Props.probLlegar(stat, linea, metadatos)` y la etiqueta, de `Props.etiquetaDificultad`.
 - **Mantén todos los textos informativos:**
@@ -70,18 +70,20 @@ Abre cada jugador y revisa:
 
 | Jugador | Estadística | Línea | Debe dar |
 |---|---|---|---|
-| Kyler Murray | Yardas de pase | 212.5 (línea justa) | **50% Parejo** |
-| Kyler Murray | Yardas de pase | 250.5 | **31% Difícil** |
-| Jacoby Brissett | Yardas de pase | 228.5 | **61% Fácil** |
+| Kyler Murray | Yardas de pase | 215.5 (línea justa) | **50% Parejo** |
+| Kyler Murray | Yardas de pase | 250.5 | **33% Difícil** |
+| Jacoby Brissett | Yardas de pase | 228.5 | **59% Parejo** |
 | Chris Godwin Jr. | Recepciones | 3.5 | **65% Fácil** |
-| Hunter Henry | Recepciones | 3.5 | **64% Fácil** |
+| Rhamondre Stevenson | Yardas recibidas (RB) | 23.5 (línea justa) | **50% Parejo** |
 | Bijan Robinson | Yardas por tierra | 100.5 | **53% Parejo** |
 
 Revisa también:
 - El encabezado de TEN @ CIN dice "Tennessee Titans (visita) @ Cincinnati Bengals (local)".
-- Hay 19 favoritos. Los 6 de confianza alta son Jacoby Brissett, Kyler Murray, Chris Godwin Jr., Bucky Irving, Hunter Henry y Makai Lemon.
-- LV @ NYJ, LAC @ LA, KC @ DEN y CHI @ SEA muestran "Sin favorito claro".
+- Cada RB tiene 5 pestañas: yardas por tierra, acarreos, recepciones, yardas recibidas y TD.
+- Hay 14 favoritos. Los 2 de confianza alta son Kyler Murray y Chris Godwin Jr.
+- CLE @ PIT, LAC @ LA, KC @ DEN, PHI @ WAS y CHI @ SEA muestran "Sin favorito claro".
 - En ATL @ TB, Bijan Robinson aparece en "Descartados por matchup".
+- El ranking de defensas se lee como "#X de 32 que más permite" (1 = la más blanda, 32 = la más dura). Conserva esa aclaración.
 
 ## Lo que sí quiero que mejores
 

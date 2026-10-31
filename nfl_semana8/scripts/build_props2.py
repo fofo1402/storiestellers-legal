@@ -7,7 +7,7 @@ from model2 import Ratings, RatingsP, team_shares, vacated, ol_out_cached, _sc
 import pickle
 from status_w8 import *
 D = '/home/user/raw/nflverse/'; O = '/home/user/data/'
-P2 = json.load(open(O + 'model5_params.json'))
+P2 = json.load(open(O + 'model6_params.json'))
 BRU, GT, GC, CAL = P2['bru'], P2['gt'], P2['gc'], P2['cal']
 RH, RA = P2['rec_h'], P2['rec_a']; VH, VA = 4, 0.5   # VH/VA: ponderación de la historia de compañeros (igual que en la prueba)
 WG = {'rush': P2['w_rush'], 'pass': P2['w_pass'], 'td': P2['w_td']}

@@ -10,7 +10,7 @@ for c in ['rushing_tds','receiving_tds','passing_tds','completions','attempts','
 pw['td_any']=pw.rushing_tds+pw.receiving_tds
 res=pd.read_csv(O+'results.csv')
 STATS={'QB':[('pass_yds','passing_yards','Yardas de pase','cont'),('cmp','completions','Pases completos','count'),('pass_td','passing_tds','TD de pase','td')],
- 'RB':[('rush_yds','rushing_yards','Yardas por tierra','cont'),('car','carries','Acarreos','count'),('rec','receptions','Recepciones','count'),('td','td_any','TD (tierra o recepción)','td')],
+ 'RB':[('rush_yds','rushing_yards','Yardas por tierra','cont'),('car','carries','Acarreos','count'),('rec','receptions','Recepciones','count'),('rec_yds','receiving_yards','Yardas recibidas','cont'),('td','td_any','TD (tierra o recepción)','td')],
  'WR':[('rec_yds','receiving_yards','Yardas recibidas','cont'),('rec','receptions','Recepciones','count'),('td','td_any','TD (recepción o tierra)','td')],
  'TE':[('rec_yds','receiving_yards','Yardas recibidas','cont'),('rec','receptions','Recepciones','count'),('td','td_any','TD (recepción o tierra)','td')]}
 COLS=['passing_yards','completions','passing_tds','attempts','rushing_yards','carries','receptions','targets','receiving_yards','td_any']

@@ -383,8 +383,8 @@ footer .wrap { display: grid; gap: 4px; }
   const T = M.modelo.prueba;
   $('foot').innerHTML = '<div><strong>' + esc(AVISO) + '</strong></div>' +
     '<div>' + esc(M.avisos[2]) + '</div>' +
-    '<div>Modelo elegido entre ' + M.modelo.busqueda.combinaciones_etapa1.toLocaleString('es-MX') + ' combinaciones, validando cada semana (4 a 8) solo con las demás. Error de predicción: ' +
-    fmt(T.sin_ajuste, 4) + ' sin ajustes, ' + fmt(T.anterior, 4) + ' con el modelo anterior y ' + fmt(T.v2, 4) + ' con este (menos es mejor). Acertó el lado de la línea ' + Math.round(T.acierto_lado * 100) + '% de las veces (' + Math.round(T.acierto_lado_confiado * 100) + '% cuando su probabilidad era 60% o más, o 40% o menos), en líneas de prueba entre la mitad y 1.5 veces el promedio de cada jugador.</div>';
+    '<div>Modelo elegido entre ' + M.modelo.busqueda.combinaciones_etapa1.toLocaleString('es-MX') + ' combinaciones, validando cada semana (4 a 8) solo con las demás. Usa todos los juegos de 2026 por igual. Error de predicción: ' +
+    fmt(T.sin_ajuste, 4) + ' sin ajustes y ' + fmt(T.v2, 4) + ' con este (menos es mejor). Acertó el lado de la línea ' + Math.round(T.acierto_lado * 100) + '% de las veces (' + Math.round(T.acierto_lado_confiado * 100) + '% cuando su probabilidad era 60% o más, o 40% o menos), en líneas de prueba entre la mitad y 1.5 veces el promedio de cada jugador. En yardas recibidas de RB, cuando dijo “Fácil” se cumplió menos (59%) de lo indicado: tómalo con cautela.</div>';
 
   /* ---------------- partidos ---------------- */
   function renderGames() {
@@ -459,7 +459,7 @@ footer .wrap { display: grid; gap: 4px; }
         '<span class="meta">' + esc(g.fecha_hora_monterrey) + ' (Monterrey) · ' + esc(g.estadio) + ' · ' + esc(g.visitante) + ' ' + esc(g.record_visitante.replace(/-0$/, '')) +
         ', ' + esc(g.local) + ' ' + esc(g.record_local.replace(/-0$/, '')) + (g.reporte_pendiente ? ' · reporte final de lesiones pendiente (sábado)' : '') + '</span>' +
       '</div>' +
-      '<div class="defs">' + g.defensas.map(t => '<span>' + esc(t) + '</span>').join('') + '</div>' +
+      '<div class="defs">' + g.defensas.map(t => '<span>' + esc(t) + '</span>').join('') + '<span>Ranking de defensas: #1 = la que más permite (la más blanda), #32 = la que menos permite (la más dura). Favorable #1-10, Intermedio #11-21, Difícil #22-32.</span></div>' +
       '<div class="roster-head">' + posFilter() + '</div>' +
       '<div class="teams">' + col(g.visitante, 'Visita', g.nombre_visitante) + col(g.local, 'Local', g.nombre_local) + '</div>' +
       '<div class="favs"><div class="favs-head"><h3>Mis favoritos para sobresalir</h3><span>Que superen su propio promedio de la temporada · en cada uno, la estadística que más me convence</span></div>' +
@@ -482,7 +482,7 @@ footer .wrap { display: grid; gap: 4px; }
         '<div><h2>' + esc(j.jugador) + '</h2><div class="sub">' + j.pos + ' · ' + esc(j.equipo) + ' (' + j.lado + ') vs ' + esc(j.rival) + ' · ' + esc(j.rol) +
         ' · ' + j.pj + ' PJ' + (j.pos === 'QB' ? ' (titularidades con 15+ intentos)' : '') + (j.muestra === 'corta' ? ' · muestra corta' : '') + '</div></div>' +
         '<div class="right">' + (j.lectura_general ? '<span class="chip ' + j.lectura_general + '">Matchup ' + j.lectura_general + '</span>' +
-        '<span class="sub">defensa rival #' + j.rank_general + ' de 32 en lo que permite a ' + j.pos + ' (ajustado)</span>' : '') + '</div>' +
+        '<span class="sub">defensa rival: #' + j.rank_general + ' de 32 que más permite a ' + j.pos + ' (1 = la más blanda, 32 = la más dura)</span>' : '') + '</div>' +
       '</div>' +
       '<div class="estado' + (j.estado !== 'OK' ? ' warn' : '') + '"><span><span class="k">Lesión:</span> ' + esc(j.estado_lesion) + '</span>' +
         '<span><span class="k">Favorito:</span> ' + (f ? 'sí, confianza ' + esc(f.confianza) : 'no') + '</span></div>';
@@ -510,7 +510,7 @@ footer .wrap { display: grid; gap: 4px; }
       '<div class="facts">' +
         fact('Promedio temporada', fmt(s.media_temporada), unit(s) + ' · ' + s.registro.length + ' juegos') +
         fact('Proyección vs ' + j.rival, fmt(s.proyeccion), sgn(s.factor_total) + ' total') +
-        fact(j.rival + ' permite (ajustado)', sgn(s.rival_indice), '#' + s.rival_rank + ' de 32 · ' + fmt(s.rival_permite_pj) + ' por juego sin ajustar') +
+        fact(j.rival + ' permite (ajustado)', sgn(s.rival_indice), '#' + s.rival_rank + ' de 32 que más permite · ' + fmt(s.rival_permite_pj) + ' por juego sin ajustar') +
         '<div class="fact"><div class="k">Matchup en esta estadística</div><div class="v"><span class="chip ' + s.lectura + '">' + s.lectura + '</span></div></div>' +
       '</div>' +
       '<div class="factors">' +
