@@ -245,7 +245,7 @@ footer .wrap { display: grid; gap: 4px; }
 .fcard ul { margin: 0; padding-left: 18px; font-size: 14px; display: grid; gap: 4px; }
 .fcard .risk { font-size: 13px; color: var(--d4); }
 .none { font-size: 14px; color: var(--muted); }
-.factors { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+.factors { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
 .best { font-size: 12px; color: var(--turf); font-weight: 600; }
 .convence { background: var(--turf-soft); border-radius: 6px; padding: 8px 10px; font-size: 14px; }
 .convence b { font-weight: 700; }
@@ -311,7 +311,7 @@ footer .wrap { display: grid; gap: 4px; }
     <div id="fav-all"></div>
     <div class="blk">
       <h3>Cambios frente a mi lista anterior</h3>
-      <p class="none">Los favoritos de la versión anterior del recheck, revisados con el modelo final (forma reciente, rival más realista y matchup obligatorio).</p>
+      <p class="none">Los favoritos de la versión anterior del recheck, revisados con el modelo final (todos los juegos de 2026, rival más realista y matchup obligatorio).</p>
       <div class="tbl-wrap"><table class="tbl" id="cambios2"></table></div>
     </div>
     <div class="blk">
@@ -423,7 +423,7 @@ footer .wrap { display: grid; gap: 4px; }
       '<div class="convence">Lo que más me convence: <b>' + esc(f.etiqueta) + ' · ' + esc(viewLine(f)) + '</b>' +
         (f.tambien && f.tambien.length ? '<br>También califican: ' + f.tambien.map(t => esc(t.etiqueta) + ' ' + esc(viewLine(t)) + ' (' + pct(t.prob) + ')').join(', ') : '') + '</div>' +
       '<div class="big"><span class="n">' + pct(f.prob) + '</span><span class="t">de superar su promedio en ' + esc(f.etiqueta.toLowerCase()) +
-      ' (promedio ' + fmt(f.promedio) + '; últimos 3: ' + f.ultimos3.map(v => fmt(v, 0)).join(', ') + '). Proyección: ' + fmt(f.proyeccion) + ' (' + sgn(f.factor) + ').</span></div>' +
+      ' (promedio ' + fmt(f.promedio) + ' en ' + f.juegos.length + ' juegos: ' + f.juegos.map(v => fmt(v, 0)).join(', ') + '). Proyección: ' + fmt(f.proyeccion) + ' (' + sgn(f.factor) + ').</span></div>' +
       '<ul>' + reasons + '</ul>' +
       (f.riesgo ? '<div class="risk">Riesgo: ' + esc(f.riesgo) + '</div>' : '') +
       '<button type="button" class="open" data-open="' + f.player_id + '">Abrir ficha y mover la línea</button>' +
@@ -508,13 +508,12 @@ footer .wrap { display: grid; gap: 4px; }
     const aus = fx.ausentes.filter(a => a[ausK] >= (ausK === 'acarreos' ? 0.15 : 0.08)).map(a => a.jugador + (a.peso < 1 ? ' (duda)' : ''));
     body.innerHTML =
       '<div class="facts">' +
-        fact('Promedio temporada', fmt(s.media_temporada), unit(s) + ' · últimos 3: ' + s.ultimos3.map(v => fmt(v, 0)).join(', ')) +
+        fact('Promedio temporada', fmt(s.media_temporada), unit(s) + ' · ' + s.registro.length + ' juegos') +
         fact('Proyección vs ' + j.rival, fmt(s.proyeccion), sgn(s.factor_total) + ' total') +
         fact(j.rival + ' permite (ajustado)', sgn(s.rival_indice), '#' + s.rival_rank + ' de 32 · ' + fmt(s.rival_permite_pj) + ' por juego sin ajustar') +
         '<div class="fact"><div class="k">Matchup en esta estadística</div><div class="v"><span class="chip ' + s.lectura + '">' + s.lectura + '</span></div></div>' +
       '</div>' +
       '<div class="factors">' +
-        fxBox('Forma reciente', s.f_forma, 'Últimos 3: ' + s.ultimos3.map(v => fmt(v, 0)).join(', ') + ' (prom. ' + fmt(s.prom_ult3) + ').') +
         fxBox('Rival (ajustado por ambos lados)', s.f_rival, 'El rival permite ' + sgn(s.rival_indice) + '; sus rivales previos permitían ' + sgn(s.calendario_indice) + '.') +
         fxBox('Línea ofensiva', s.f_linea, (fx.ol_nota || 'Titulares completos') + '. Solo afecta lo terrestre.') +
         fxBox('Compañeros', s.f_companeros, aus.length ? 'Fuera: ' + aus.join(', ') + '.' : 'Sin cambios relevantes de compañeros.') +
@@ -540,7 +539,7 @@ footer .wrap { display: grid; gap: 4px; }
         '<div class="chart"><h3>Juego por juego contra tu línea</h3><p id="log-cap"></p><div id="log"></div></div>' +
       '</div>' +
       '<div class="note">' +
-        '<span>Cómo se calcula: su promedio × forma reciente × ajuste del rival × línea ofensiva × compañeros. El rival se mide por ambos lados: lo que permite su defensa ajustado por las ofensivas que enfrentó (con la temporada 2025 como referencia ligera), contra lo que permitían las defensas que este jugador ya enfrentó. Todas las cifras del jugador son de 2026 y cuentan todos sus juegos.</span>' +
+        '<span>Cómo se calcula: su promedio de todos sus juegos de 2026 × ajuste del rival × línea ofensiva × compañeros. El rival se mide por ambos lados: lo que permite su defensa ajustado por las ofensivas que enfrentó (con la temporada 2025 como referencia ligera), contra lo que permitían las defensas que este jugador ya enfrentó. Todas las cifras del jugador son de 2026 y cuentan todos sus juegos.</span>' +
         (s.tipo === 'td' ? '<span>TD: una línea de 0.5 significa 1 o más.</span>' : s.tipo === 'count' ? '<span>En conteos, una línea con .5 se redondea hacia arriba: 5.5 significa 6 o más.</span>' : '') +
       '</div>';
     updateLine(j, s, l);
@@ -650,7 +649,7 @@ footer .wrap { display: grid; gap: 4px; }
     const alta = all.filter(f => f.confianza === 'Alta'), media = all.filter(f => f.confianza !== 'Alta');
     const sinFav = D.partidos.filter(g => !g.favoritos.length).map(g => g.partido);
     $('fav-sub').textContent = all.length + ' favoritos en ' + (D.partidos.length - sinFav.length) + ' de ' + D.partidos.length + ' partidos (' + alta.length +
-      ' de confianza alta). Regla: en la estadística elegida, matchup no difícil, el rival no resta, ajuste total de +4% o más y 55% o más de superar su propio promedio (Alta: 60% o más, matchup favorable, sano y sin mala racha). Sin favorito claro: ' + (sinFav.join(', ') || 'ninguno') + '.';
+      ' de confianza alta). Regla: en la estadística elegida, matchup no difícil, el rival no resta, ajuste total de +4% o más y 55% o más de superar su propio promedio (Alta: 60% o más, matchup favorable y sano). Sin favorito claro: ' + (sinFav.join(', ') || 'ninguno') + '.';
     $('fav-all').innerHTML =
       '<div class="favs-head"><h3>Confianza alta</h3></div><div class="fav-list">' + alta.map(f => favCard(f, true)).join('') + '</div>' +
       '<div class="favs-head" style="margin-top:18px"><h3>Confianza media</h3></div><div class="fav-list">' + media.map(f => favCard(f, true)).join('') + '</div>';

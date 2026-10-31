@@ -20,7 +20,7 @@ Te adjunto `index.html`: "La Línea · NFL Semana 8", una app en español que ya
   - **Todos** los jugadores con participación probable (QB, RB, WR, TE). Cada uno con su rol (Titular, Rotación o Rol menor), % de snaps, etiqueta de matchup (Favorable, Intermedio o Difícil), marcas de estado (★ ALTA o MEDIA si es favorito, "Duda", "Pendiente" y "Regresa") y, si tiene participación decente, la línea **"Lo más probable"** (su estadística con mayor probabilidad de superar su promedio).
 - Al final del partido va la sección **"Mis favoritos para sobresalir"**. Cada tarjeta muestra:
   - **"Lo que más me convence"**: la estadística elegida y su línea, más "También califican" si hay otras;
-  - el % de superar su propio promedio y sus últimos 3 juegos;
+  - el % de superar su propio promedio y todos sus juegos de la temporada;
   - la línea y la proyección;
   - las razones (rival ajustado, compañeros, línea ofensiva);
   - el riesgo;
@@ -35,7 +35,7 @@ Te adjunto `index.html`: "La Línea · NFL Semana 8", una app en español que ya
   - RB: yardas por tierra, acarreos, recepciones, **yardas recibidas** y TD (5 pestañas).
   - WR y TE: yardas recibidas, recepciones y TD.
 - Datos clave: promedio, proyección, lo que permite el rival (ajustado) y el matchup en esa estadística.
-- **Desglose de factores** en 5 cajas: Forma reciente, Rival (ajustado por ambos lados), Línea ofensiva, Compañeros y Ajuste total.
+- **Desglose de factores** en 4 cajas: Rival (ajustado por ambos lados), Línea ofensiva, Compañeros y Ajuste total. El promedio usa todos los juegos de 2026.
 - **"Lo que más le gusta al modelo"**: lista de sus estadísticas ordenadas por probabilidad de superar su promedio; al tocar una se cambia la pestaña.
 - **"Tu línea"**: se mueve con un deslizador, con − y +, o escribiendo el número, en pasos de 0.5. Arranca en la **línea justa** (la más cercana a 50%) y tiene un botón para volver a ella.
 - **Veredicto**: el % de llegar a la línea o superarla y la etiqueta (Muy fácil, Fácil, Parejo, Difícil o Muy difícil). Debe conservar la frase de calibración ("cuando el modelo dijo X, se cumplió el Y%").
