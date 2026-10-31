@@ -161,6 +161,25 @@ main.wrap { padding-top: 22px; padding-bottom: 48px; }
 .sb-meta .pend { color: var(--line); font-weight: 600; }
 
 .defs { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+/* ---------- mapa del partido ---------- */
+.mapa { margin-top: 12px; background: var(--surface); border: 1px solid var(--rule); border-radius: var(--r-sm); padding: 12px 14px; display: grid; gap: 8px; }
+.mapa-h { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: baseline; justify-content: space-between; }
+.mapa-h b { font-family: var(--font-cond); font-weight: 800; font-size: 15px; letter-spacing: .06em; text-transform: uppercase; }
+.mapa-h span { font-size: 12.5px; color: var(--muted); }
+.mapa-row { display: grid; grid-template-columns: 150px repeat(4, minmax(0, 1fr)); gap: 6px; align-items: stretch; }
+.mapa-lbl { font-size: 13px; color: var(--ink-2); display: flex; align-items: center; line-height: 1.25; }
+.mapa-lbl b { font-family: var(--font-cond); font-weight: 800; font-size: 16px; color: var(--ink); margin-right: 4px; }
+.mcell { border-radius: 8px; padding: 6px 8px; display: grid; gap: 2px; border: 1px solid var(--rule); position: relative; overflow: hidden; background: var(--surface-2); }
+.mcell .mp { font-family: var(--font-cond); font-weight: 800; font-size: 13px; letter-spacing: .05em; color: var(--muted); }
+.mcell .mr { font-family: var(--font-display); font-weight: 800; font-size: 20px; line-height: 1; }
+.mcell .mi { font-size: 12px; color: var(--ink-2); }
+.mcell .mb { position: absolute; left: 0; bottom: 0; height: 4px; width: var(--w); }
+.mcell.Favorable { border-color: color-mix(in srgb, var(--chip-fav) 45%, var(--rule)); background: color-mix(in srgb, var(--chip-fav) 10%, var(--surface)); }
+.mcell.Favorable .mr { color: var(--chip-fav); } .mcell.Favorable .mb { background: var(--chip-fav); }
+.mcell.Intermedio .mr { color: var(--chip-int); } .mcell.Intermedio .mb { background: var(--chip-int); }
+.mcell.Difícil { border-color: color-mix(in srgb, var(--chip-dif) 40%, var(--rule)); background: color-mix(in srgb, var(--chip-dif) 8%, var(--surface)); }
+.mcell.Difícil .mr { color: var(--chip-dif); } .mcell.Difícil .mb { background: var(--chip-dif); }
+@media (max-width: 560px) { .mapa-row { grid-template-columns: repeat(4, minmax(0, 1fr)); } .mapa-lbl { grid-column: 1 / -1; } }
 .def { display: grid; grid-template-columns: auto 1fr; gap: 10px; align-items: start; background: var(--surface); border: 1px solid var(--rule); border-radius: var(--r-sm); padding: 10px 12px; font-size: 14px; color: var(--ink-2); }
 .def svg { width: 18px; height: 18px; color: var(--muted); margin-top: 1px; }
 
@@ -1291,6 +1310,9 @@ footer { background: transparent; }
           '<span class="vh">' + esc(g.visitante) + ' ' + rv + ', ' + esc(g.local) + ' ' + rl + '</span>' +
           (g.reporte_pendiente ? '<span class="pend">' + ico('alert') + 'reporte final de lesiones pendiente (sábado)</span>' : '') + '</div>' +
       '</div>' +
+      (g.mapa ? '<div class="mapa" aria-label="Mapa del partido"><div class="mapa-h"><b>Mapa del partido</b><span>Qué tan blanda es cada defensa por posición · # de 32 que más permite · barra = más blanda</span></div>' +
+        g.mapa.map(m => '<div class="mapa-row"><div class="mapa-lbl"><span><b>' + esc(m.ataca) + '</b>ataca a la defensa de ' + esc(m.defiende) + '</span></div>' +
+          m.celdas.map(c => '<div class="mcell ' + c.lectura + '" title="' + esc(c.lectura) + '"><span class="mp">' + c.pos + '</span><span class="mr">#' + c.rank + '</span><span class="mi">' + sgn(c.indice) + ' vs prom.</span><span class="mb" style="--w:' + ((33 - c.rank) / 32 * 100).toFixed(1) + '%"></span></div>').join('') + '</div>').join('') + '</div>' : '') +
       '<div class="defs">' + g.defensas.map(t => '<div class="def">' + ico('shield') + '<span>' + esc(t) + '</span></div>').join('') + '<p class="rank-note">Ranking de defensas: #1 = la que más permite (la más blanda), #32 = la que menos permite (la más dura). Favorable #1-10, Intermedio #11-21, Difícil #22-32.</p></div>' +
       '<div class="filterbar">' + posFilter() +
         '<span class="legend"><span><span class="star">★</span> favorito</span><span>Recuadro negro = titular</span><span class="chip Favorable">Matchup</span></span></div>' +
@@ -1378,6 +1400,7 @@ footer { background: transparent; }
       '</div>' +
       '<div class="card"><span class="eyebrow">Desglose de factores · verde suma, rojo resta</span><div class="factors">' +
         fxBox('Forma reciente', s.f_forma, 'Cuenta sus ' + s.registro.length + ' juegos, con más peso a los recientes.') +
+        (s.f_uso != null ? fxBox('Volumen y eficiencia', s.f_uso, 'Sus targets, acarreos o intentos por su eficiencia, acercada al promedio de su posición.') : '') +
         fxBox('Rival (ajustado por ambos lados)', s.f_rival, 'El rival permite ' + sgn(s.rival_indice) + '; sus rivales previos permitían ' + sgn(s.calendario_indice) + '.') +
         fxBox('Línea ofensiva', s.f_linea, (fx.ol_nota || 'Titulares completos') + '. Solo afecta lo terrestre.') +
         fxBox('Compañeros', s.f_companeros, aus.length ? 'Fuera: ' + aus.join(', ') + '.' + (Math.round((s.f_companeros - 1) * 100) === 0 && ausK === 'targets' ? ' Los targets que dejan libres no se ajustan: en la prueba no mejoraron la predicción.' : '') : 'Sin cambios relevantes de compañeros.') +
@@ -1390,7 +1413,7 @@ footer { background: transparent; }
         '<div class="chart"><h3>Juego por juego contra tu línea</h3><p class="cap" id="log-cap"></p><div class="ckey"><span><i class="hit"></i>Llegó</span><span><i class="miss"></i>No llegó</span><span><i class="ln"></i>Tu línea</span></div><div id="log"></div></div>' +
       '</div>' +
       '<div class="note">' +
-        '<span><b>Cómo se calcula:</b> su promedio de todos sus juegos de 2026 × forma reciente (más peso a sus últimos juegos) × ajuste del rival × línea ofensiva × compañeros. El rival se mide por ambos lados: lo que permite su defensa ajustado por las ofensivas que enfrentó (con la temporada 2025 como referencia ligera), contra lo que permitían las defensas que este jugador ya enfrentó. Todas las cifras del jugador son de 2026 y cuentan todos sus juegos.</span>' +
+        '<span><b>Cómo se calcula:</b> su promedio de todos sus juegos de 2026 × forma reciente (más peso a sus últimos juegos) × volumen y eficiencia (sus targets, acarreos o intentos por su eficiencia, acercada al promedio de su posición) × ajuste del rival × línea ofensiva × compañeros. El rival se mide por ambos lados: lo que permite su defensa ajustado por las ofensivas que enfrentó (con la temporada 2025 como referencia ligera), contra lo que permitían las defensas que este jugador ya enfrentó. Todas las cifras del jugador son de 2026 y cuentan todos sus juegos.</span>' +
         (s.tipo === 'td' ? '<span>TD: una línea de 0.5 significa 1 o más.</span>' : s.tipo === 'count' ? '<span>En conteos, una línea con .5 se redondea hacia arriba: 5.5 significa 6 o más.</span>' : '') +
       '</div>' +
       '<div class="sheet-aviso"><strong>' + esc(AVISO) + '</strong></div>' +

@@ -5,7 +5,7 @@ import json, math
 from collections import defaultdict
 from status_w8 import OUT, QUESTIONABLE, FUENTES, TEAM_NAME, OL_OUT_NOW, PENDING_TEAMS
 O = '/home/user/data/'; E = '/home/user/entrega_semana8/'
-RAW = json.load(open(O + 'props2_raw.json')); P2 = json.load(open(O + 'model7_params.json'))
+RAW = json.load(open(O + 'props2_raw.json')); P2 = json.load(open(O + 'model9_params.json'))
 V2 = json.load(open(O + 'props_data_v6.json'))
 OLD = json.load(open(O + 'props_data_v1.json'))
 players = RAW['players']
@@ -99,6 +99,12 @@ for p in players:
                 tambien=[stat_view(x) for x in q[1:]])
     fav[p['partido']].append(cand)
 for g in fav: fav[g].sort(key=lambda c: (c['confianza'] != 'Alta', -c['prob']))
+# aviso de backfield compartido: dos RB favoritos del mismo equipo se reparten la carga
+for g, lst in fav.items():
+    for c in lst:
+        mates = [o['jugador'] for o in lst if o is not c and o['equipo'] == c['equipo'] and o['pos'] == 'RB' == c['pos']]
+        if mates: c['riesgo'] = (c['riesgo'] + ' ' if c['riesgo'] else '') + f"Comparte el backfield con {', '.join(mates)} (también favorito): si uno acapara la carga, el otro baja."
+
 
 # ---------- partidos ----------
 def def_summary(team, opp):
@@ -121,6 +127,9 @@ for g in OLD['partidos']:
                 s = sm(p, MAIN[p['pos']]); out[p['pos']] = (s['rival_indice'], s['rival_rank'])
         return out
     dv, dl = idx(v), idx(l)
+    def lect(rk): return 'Favorable' if rk <= 10 else ('Intermedio' if rk <= 21 else 'Difícil')
+    mapa = [dict(ataca=atk, defiende=dfn, celdas=[dict(pos=pos, rank=d[pos][1], indice=d[pos][0], lectura=lect(d[pos][1])) for pos in ['QB', 'RB', 'WR', 'TE'] if pos in d])
+            for atk, dfn, d in [(v, l, dl), (l, v, dv)]]
     def txt(defteam, d):
         soft = [f"{pos} (#{rk}, {pc(ix)})" for pos, (ix, rk) in sorted(d.items(), key=lambda kv: kv[1][1]) if rk <= 8]
         hard = [f"{pos} (#{rk}, {pc(ix)})" for pos, (ix, rk) in sorted(d.items(), key=lambda kv: -kv[1][1]) if rk >= 25]
@@ -135,7 +144,7 @@ for g in OLD['partidos']:
         linea_ofensiva={v: OL_OUT_NOW[v][1], l: OL_OUT_NOW[l][1]},
         no_juegan={v: outs[v], l: outs[l]}, reporte_pendiente=(v in PENDING_TEAMS or l in PENDING_TEAMS),
         favoritos=fav.get(g['partido'], []), mas_cercano=(None if fav.get(g['partido']) else near.get(g['partido'])),
-        descartados=blocked.get(g['partido'], [])))
+        descartados=blocked.get(g['partido'], []), mapa=mapa))
 
 # ---------- cambios frente al análisis anterior (21 selecciones) ----------
 favids = {c['player_id']: c for g in fav.values() for c in g}

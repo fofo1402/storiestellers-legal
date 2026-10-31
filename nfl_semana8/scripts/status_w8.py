@@ -53,9 +53,11 @@ CLEARED = {  # confirmados sin designación / regresan
 }
 PENDING_TEAMS = {'CHI', 'SEA'}  # lunes: reporte final el sábado
 PENDING_NOTES = {
-    'Rashid Shaheed': ('SEA', 'No practicó el jueves (rodilla). Reporte final el sábado.'),
+    'Rashid Shaheed': ('SEA', 'No practicó el jueves (rodilla); un medio local lo reporta fuera. Reporte final el sábado.'),
     'Velus Jones Jr.': ('SEA', 'No practicó el jueves (isquiotibial). Reporte final el sábado.'),
     'Jaxon Smith-Njigba': ('SEA', 'Descanso el jueves (no es lesión). Reporte final el sábado.'),
+    'Emanuel Wilson': ('SEA', 'Riesgo de reparto: Zach Charbonnet regresa de la reserva de lesionados (practicó limitado) y puede quitarle acarreos. Reporte final el sábado.'),
+    'George Holani': ('SEA', 'Riesgo de reparto: Zach Charbonnet regresa de la reserva de lesionados (practicó limitado). Reporte final el sábado.'),
 }
 RETURNING = {'Lamar Jackson', 'Rashee Rice', 'Ladd McConkey', "Tre' Harris", 'Jeremiyah Love', 'Tyler Warren', 'Breece Hall', 'Joe Alt'}
 QB_STARTER = {'BAL': 'Lamar Jackson'}  # el resto: titular del último juego

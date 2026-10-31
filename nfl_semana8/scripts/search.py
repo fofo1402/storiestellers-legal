@@ -13,8 +13,8 @@ G={'rush':isR,'td':isTD,'pass':~isR&~isTD}
 PRI=['']+['_'+t for t in ['03_4','05_4','05_8','07_8','07_12','09_8','09_12','10_16','05_12']]
 EW={h:B[f'ew{h}'].values for h in [2,3,4,6]}
 k=np.ceil(L-1e-9)
-def probs(p):
-    base=np.where(mean>0, mu0*((1-p['A'])+p['A']*EW[p['H']]/np.where(mean>0,mean,1)), mu0)
+def probs(p, base_override=None):
+    base=np.where(mean>0, mu0*((1-p['A'])+p['A']*EW[p['H']]/np.where(mean>0,mean,1)), mu0) if base_override is None else base_override
     dr=B['dr'+p['pri']].values; df=B[('dfaced' if p['pri']=='' else 'df'+p['pri'])].values
     ratio=np.where((dr>0)&(df>0),dr/np.where(df>0,df,1),1)
     w=np.where(G['rush'],p['wr'],np.where(G['td'],p['wt'],p['wp']))

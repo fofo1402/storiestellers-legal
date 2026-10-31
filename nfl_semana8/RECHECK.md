@@ -1,5 +1,25 @@
 # Recheck final · NFL 2026 Semana 8
 
+**Veredicto final (sáb 31-oct, 04:25 UTC):** modelo de uso (volumen × eficiencia encogida al promedio de la posición, peso 0.5, K=1600; excepto yardas de pase de QB) + TD por volumen (peso 0.75) + forma reciente + rival ajustado por ambos lados. Error validado por semana 0.1986 (publicado anterior 0.2013; sin ajustes 0.2048). Parámetros: scripts/model9_params.json.
+
+| # | Partido | Jugador | Conf. | Lo que más me convence | % |
+|---|---|---|---|---|---|
+| 1 | MIN @ DET | Kyler Murray | Alta | TD de pase 1 o más | 76% |
+| 2 | ARI @ DAL | Dak Prescott | Alta | TD de pase 2 o más | 60% |
+| 3 | ATL @ TB | Baker Mayfield | Media | TD de pase 1 o más | 78% |
+| 4 | NE @ MIA | Malik Willis | Media | TD de pase 1 o más | 67% |
+| 5 | IND @ JAX | Trevor Lawrence | Media | Pases completos 20 o más | 64% |
+| 6 | IND @ JAX | Daniel Jones | Media | Pases completos 21 o más | 60% |
+| 7 | ARI @ DAL | Jacoby Brissett | Media | TD de pase 2 o más | 60% |
+| 8 | LV @ NYJ | Braelon Allen | Media | Acarreos 13 o más | 59% |
+| 9 | NE @ MIA | Hunter Henry | Media | Recepciones 4 o más | 57% |
+| 10 | CLE @ PIT | Deshaun Watson | Media | Pases completos 20 o más | 57% |
+| 11 | ATL @ TB | Bucky Irving | Media | TD (tierra o recepción) 1 o más | 57% |
+| 12 | LV @ NYJ | Breece Hall | Media | Acarreos 17 o más | 56% |
+| 13 | TEN @ CIN | Cam Ward | Media | Pases completos 19 o más | 56% |
+| 14 | NE @ MIA | Rhamondre Stevenson | Media | Acarreos 11 o más | 56% |
+
+
 **Versión vigente (04:05, sáb 31-oct UTC):** diseño de Claude Design (app/design_src.html → app/build_design.py) con el modelo de forma reciente recalibrado sobre 11,543 predicciones (incluye yardas recibidas de RB). Error 0.2013 (todos los juegos igual: 0.2019; sin ajustes: 0.2048); acierta el lado 68.4% (74.4% con prob. ≥60% o ≤40%). Los targets de compañeros ausentes ya no se ajustan (no mejoraron la predicción). Parámetros: scripts/model7_params.json. Favoritos: 18; Alta: Kyler Murray, Jacoby Brissett, Chris Godwin Jr., Hunter Henry.
 
 

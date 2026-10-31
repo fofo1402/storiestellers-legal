@@ -1,0 +1,95 @@
+{
+ "w_rush": 0.8,
+ "w_pass": 0.8,
+ "w_td": 0.65,
+ "prior_rho": 0.5,
+ "prior_k": 12,
+ "rec_h": 2,
+ "rec_a": 0.5,
+ "bru": -0.06,
+ "gt": 0.0,
+ "gc": 1.0,
+ "dvw": false,
+ "disp_cont": 0.9,
+ "disp_count": 1.0,
+ "uso": {
+  "peso": 0.5,
+  "K": 1600,
+  "excluir": [
+   "QB:passing_yards"
+  ]
+ },
+ "td_vol": 0.75,
+ "cal": {
+  "cont": [
+   -0.021277055098983352,
+   0.7060524879296963
+  ],
+  "count": [
+   0.0898614371582519,
+   0.9664458222809491
+  ],
+  "td": [
+   -0.003113146685064109,
+   0.9686580709367969
+  ]
+ },
+ "test": {
+  "sin_ajuste": 0.2048,
+  "anterior_v4": 0.2013,
+  "final": 0.1986,
+  "acierto_lado": 0.6861301221519536,
+  "acierto_lado_confiado": 0.7503088707684705,
+  "acierto_lado_fuerte": 0.8137692932575142
+ },
+ "busqueda": {
+  "combinaciones_etapa1": 30000,
+  "validadas_etapa2": 300,
+  "refinamiento_local": 16,
+  "filas": 11543
+ },
+ "calib": {
+  "Muy dif\u00edcil": {
+   "n": 1292,
+   "acierto": 0.11068111455108359
+  },
+  "Dif\u00edcil": {
+   "n": 3587,
+   "acierto": 0.30889322553666015
+  },
+  "Parejo": {
+   "n": 3456,
+   "acierto": 0.49421296296296297
+  },
+  "F\u00e1cil": {
+   "n": 2077,
+   "acierto": 0.6966779008184882
+  },
+  "Muy f\u00e1cil": {
+   "n": 1131,
+   "acierto": 0.8753315649867374
+  }
+ },
+ "rb_rec_yds_calib": {
+  "Muy dif\u00edcil": {
+   "n": 38,
+   "acierto": 0.15789473684210525
+  },
+  "Dif\u00edcil": {
+   "n": 458,
+   "acierto": 0.3318777292576419
+  },
+  "Parejo": {
+   "n": 479,
+   "acierto": 0.4906054279749478
+  },
+  "F\u00e1cil": {
+   "n": 93,
+   "acierto": 0.6021505376344086
+  },
+  "Muy f\u00e1cil": {
+   "n": 10,
+   "acierto": 0.7
+  }
+ }
+}

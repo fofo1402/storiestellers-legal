@@ -7,7 +7,16 @@ from model2 import Ratings, RatingsP, team_shares, vacated, ol_out_cached, _sc
 import pickle
 from status_w8 import *
 D = '/home/user/raw/nflverse/'; O = '/home/user/data/'
-P2 = json.load(open(O + 'model7_params.json'))
+P2 = json.load(open(O + 'model9_params.json'))
+USO_U, USO_K = P2['uso']['peso'], P2['uso']['K']
+USE = {'receiving_yards': ('targets', 'receiving_yards'), 'receptions': ('targets', 'receptions'), 'rushing_yards': ('carries', 'rushing_yards'),
+       'passing_yards': ('attempts', 'passing_yards'), 'completions': ('attempts', 'completions')}
+_q = pw[(pw.pgrp != 'QB') | (pw.attempts >= 15)]
+TDB = P2.get('td_vol', 0.0)
+_rb = pw[pw.pgrp == 'RB']; _qq = pw[(pw.pgrp == 'QB') & (pw.attempts >= 15)]
+TDR = dict(att=_qq.passing_tds.sum() / _qq.attempts.sum(), car=_rb.rushing_tds.sum() / _rb.carries.sum(), rbt=_rb.receiving_tds.sum() / max(_rb.targets.sum(), 1),
+           WR=pw[pw.pgrp == 'WR'].td_any.sum() / max(pw[pw.pgrp == 'WR'].targets.sum(), 1), TE=pw[pw.pgrp == 'TE'].td_any.sum() / max(pw[pw.pgrp == 'TE'].targets.sum(), 1))
+EFF0 = {(pg, c): _q[_q.pgrp == pg][num].sum() / max(_q[_q.pgrp == pg][vol].sum(), 1) for pg in ['QB', 'RB', 'WR', 'TE'] for c, (vol, num) in USE.items()}
 BRU, GT, GC, CAL = P2['bru'], P2['gt'], P2['gc'], P2['cal']
 RH, RA = P2['rec_h'], P2['rec_a']
 VH, VA = 4, (0.5 if P2.get('dvw', True) else 0.0)   # historia de compañeros: ponderada (dvw) o promedio simple, igual que en la prueba
@@ -167,7 +176,24 @@ for x in POOL.itertuples():
         if x.pos != 'QB':
             if c in REC or c == 'td_any': fv *= min(1.5, max(0.7, 1 / (1 - dvt))) ** GT
             if c in RUSH or (c == 'td_any' and x.pos == 'RB'): fv *= min(1.5, max(0.7, 1 / (1 - min(dvc, 0.6)))) ** GC
-        f = ffo * fr * fo * fv; mu = mu0 * f
+        fuso = 1.0
+        if c in USE and mraw > 0 and not (x.pos == 'QB' and c == 'passing_yards'):   # en yardas de pase de QB el modelo de uso no mejoró la prueba
+            vol_, num_ = USE[c]
+            V = np.array([gg['vals'][vol_] for gg in g]); Nn = np.array([gg['vals'][num_] for gg in g])
+            w2 = 0.5 ** ((n_ - 1 - np.arange(n_)) / RH); w2 = w2 / w2.sum()
+            volm = (1 - RA) * V.mean() + RA * (w2 * V).sum()
+            eff = (Nn.sum() + USO_K * EFF0[(x.pos, c)]) / (V.sum() + USO_K)
+            ub = volm * eff; bc = mu0 * ffo
+            if ub > 0 and bc > 0: fuso = ((1 - USO_U) * bc + USO_U * ub) / bc
+        elif kind == 'td' and TDB > 0:
+            w2 = 0.5 ** ((n_ - 1 - np.arange(n_)) / 2); w2 = w2 / w2.sum()
+            vv = lambda k_: 0.5 * (np.array([gg['vals'][k_] for gg in g]).mean() + (w2 * np.array([gg['vals'][k_] for gg in g])).sum())
+            if x.pos == 'QB': lv = TDR['att'] * vv('attempts')
+            elif x.pos == 'RB': lv = TDR['car'] * vv('carries') + TDR['rbt'] * vv('targets')
+            else: lv = TDR[x.pos] * vv('targets')
+            bc = mu0 * ffo
+            if bc > 0: fuso = ((1 - TDB) * bc + TDB * lv) / bc
+        f = ffo * fuso * fr * fo * fv; mu = mu0 * f
         dd = dict(kind='td', mu=mu) if kind == 'td' else dict(kind=kind, mu=mu, sd=(d['sd'] / mu0 * mu * DISP[kind] if mu0 > 0 else 0.0))
         dp = dist_params(dd)
         if dp.get('dist') == 'poisson' and dp['lam'] <= 0: dp = dict(dist='zero')
@@ -176,7 +202,7 @@ for x in POOL.itertuples():
         avg_line = (math.floor(d['mean_raw']) + 0.5) if kind == 'cont' else max(0.5, math.ceil(d['mean_raw'] - 1e-9) - 0.5)
         stats_.append(dict(key=key, etiqueta=label, tipo=kind, media_temporada=d['mean_raw'], proyeccion=mu, de=(d['sd'] / mu0 * mu * DISP[kind] if kind != 'td' and mu0 > 0 else None),
             rival_permite_pj=float(RK[x.pos + '_pg'][c][rival]), rival_indice=dr, rival_rank=rk, lectura=lect, calendario_indice=dfc,
-            f_forma=ffo, ultimos3=[float(v) for v in xs[-3:]], prom_ult3=float(xs[-3:].mean()), f_rival=fr, f_linea=fo, f_companeros=fv, factor_total=f, dist=dp, linea_sugerida=fl,
+            f_forma=ffo, f_uso=fuso, ultimos3=[float(v) for v in xs[-3:]], prom_ult3=float(xs[-3:].mean()), f_rival=fr, f_linea=fo, f_companeros=fv, factor_total=f, dist=dp, linea_sugerida=fl,
             prob_superar_promedio=pcal(dp, kind, avg_line), linea_promedio=avg_line,
             registro=[dict(sem=gg['week'], rival=gg['opp'], cond='L' if gg['ha'] == 'vs' else 'V', valor=gg['vals'][c]) for gg in g]))
         for L in sorted({fl, avg_line, round(mu * 0.6, 1), round(mu * 1.4, 1)} if kind != 'td' else {0.5, 1.5}):
