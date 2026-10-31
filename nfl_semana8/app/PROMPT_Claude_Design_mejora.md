@@ -35,7 +35,7 @@ Te adjunto `index.html`: "La Línea · NFL Semana 8", una app en español que ya
   - RB: yardas por tierra, acarreos, recepciones, **yardas recibidas** y TD (5 pestañas).
   - WR y TE: yardas recibidas, recepciones y TD.
 - Datos clave: promedio, proyección, lo que permite el rival (ajustado) y el matchup en esa estadística.
-- **Desglose de factores** en 4 cajas: Rival (ajustado por ambos lados), Línea ofensiva, Compañeros y Ajuste total. El promedio usa todos los juegos de 2026.
+- **Desglose de factores** en 5 cajas: Forma reciente, Rival (ajustado por ambos lados), Línea ofensiva, Compañeros y Ajuste total. El promedio usa todos los juegos de 2026; la forma reciente da más peso a los últimos.
 - **"Lo que más le gusta al modelo"**: lista de sus estadísticas ordenadas por probabilidad de superar su promedio; al tocar una se cambia la pestaña.
 - **"Tu línea"**: se mueve con un deslizador, con − y +, o escribiendo el número, en pasos de 0.5. Arranca en la **línea justa** (la más cercana a 50%) y tiene un botón para volver a ella.
 - **Veredicto**: el % de llegar a la línea o superarla y la etiqueta (Muy fácil, Fácil, Parejo, Difícil o Muy difícil). Debe conservar la frase de calibración ("cuando el modelo dijo X, se cumplió el Y%").
