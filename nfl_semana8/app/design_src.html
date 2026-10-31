@@ -672,6 +672,37 @@ nav.tabs a:not([aria-current="page"]) > span[aria-hidden] { color: inherit; }
 
 .frank { padding: 0; overflow: hidden; }
 /* ---------- Parlays del modelo ---------- */
+.totc { margin-top: 12px; background: var(--surface); border: 1px solid var(--rule); border-radius: var(--r-sm); padding: 12px 14px; display: grid; gap: 8px; }
+.totc-h { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: baseline; justify-content: space-between; }
+.totc-h b { font-family: var(--font-cond); font-weight: 800; font-size: 15px; letter-spacing: .06em; text-transform: uppercase; }
+.totc-h span { font-size: 12.5px; color: var(--muted); }
+.totc-row { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; }
+.totc .num { display: inline-flex; align-items: stretch; border: 1px solid var(--rule); border-radius: 8px; overflow: hidden; }
+.totc .num button { border: 0; background: var(--surface-2); width: 36px; font-size: 18px; cursor: pointer; color: var(--ink); }
+.totc .num input { width: 78px; border: 0; text-align: center; font-family: var(--font-display); font-weight: 800; font-size: 22px; background: var(--line); color: var(--line-ink); }
+.totc .side { display: grid; gap: 2px; min-width: 120px; }
+.totc .side .k { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+.totc .side .v { font-family: var(--font-display); font-weight: 900; font-size: 28px; line-height: 1; }
+.totc .side button { justify-self: start; }
+.totc small { color: var(--muted); font-size: 12.5px; }
+.mine { border: 2px solid var(--ink); border-radius: var(--r-sm); background: var(--surface); padding: 14px 16px; display: grid; gap: 10px; margin-bottom: 14px; }
+.mine h3 { font-size: 26px; font-weight: 900; text-transform: uppercase; margin: 0; }
+.mine .empty-help { font-size: 14px; color: var(--ink-2); margin: 0; }
+.mine .legs li { grid-template-columns: minmax(0, 1fr) auto auto; }
+.mine .rm { border: 1px solid var(--rule-strong); background: transparent; border-radius: 6px; padding: 2px 8px; cursor: pointer; font-size: 12px; color: var(--muted); }
+.mine .warn { color: var(--d4); font-size: 12px; }
+.verdict-pl { border-radius: 8px; padding: 10px 12px; display: grid; gap: 4px; }
+.verdict-pl b.v { font-family: var(--font-display); font-size: 24px; font-weight: 900; text-transform: uppercase; }
+.verdict-pl.rec { background: color-mix(in srgb, var(--chip-fav) 14%, var(--surface)); border: 1.5px solid var(--chip-fav); } .verdict-pl.rec b.v { color: var(--chip-fav); }
+.verdict-pl.mod { background: color-mix(in srgb, var(--line) 18%, var(--surface)); border: 1.5px solid color-mix(in srgb, var(--line) 70%, var(--rule)); }
+.verdict-pl.arr { background: color-mix(in srgb, var(--chip-dif) 10%, var(--surface)); border: 1.5px solid var(--chip-dif); } .verdict-pl.arr b.v { color: var(--chip-dif); }
+.verdict-pl ul { margin: 0; padding-left: 18px; font-size: 13.5px; display: grid; gap: 2px; }
+.mine-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.mine-actions button, .loadpl, .addleg { border: 1.5px solid var(--turf); color: var(--turf); background: transparent; border-radius: 8px; padding: 6px 12px; cursor: pointer; font-weight: 600; font-size: 13.5px; }
+.addleg { background: var(--turf); color: var(--turf-ink); }
+.pl-chip { position: fixed; right: 12px; top: calc(var(--hdr-h, 64px) + 8px); z-index: 45; background: var(--ink); color: var(--surface); border: 0; border-radius: 999px; padding: 10px 16px; font-weight: 700; cursor: pointer; box-shadow: 0 6px 20px rgba(0,0,0,.25); }
+.pl-chip[hidden] { display: none; }
+@media (min-width: 961px) { .pl-chip { top: auto; right: auto; left: 16px; bottom: 24px; } }
 .parlay { background: var(--surface); border: 1px solid var(--rule); border-radius: var(--r-sm); padding: 12px 14px; display: grid; gap: 8px; margin-top: 12px; }
 .parlay.ok { border: 2px solid var(--turf); }
 .parlay-h { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: baseline; justify-content: space-between; }
@@ -1158,6 +1189,7 @@ footer { background: transparent; }
     </div>
   </section>
 </main>
+<button type="button" class="pl-chip" id="pl-chip" hidden>Mi parlay</button>
 
 <nav class="bnav" aria-label="Secciones">
   <a href="#partidos" data-view="partidos"><svg aria-hidden="true"><use href="#i-field"/></svg><span>Partidos</span></a>
@@ -1196,7 +1228,11 @@ footer { background: transparent; }
   const firstFav = D.partidos.flatMap(g => g.favoritos).find(f => f.confianza === 'Alta');
   const REDUCED = matchMedia('(prefers-reduced-motion: reduce)');
 
-  const state = { view: 'partidos', game: D.partidos[0].partido, pos: 'Todos', pid: null, statKey: null, lines: {}, q: '', open: false, favF: 'Todos', help: true };
+  const state = { view: 'partidos', game: D.partidos[0].partido, pos: 'Todos', pid: null, statKey: null, lines: {}, q: '', open: false, favF: 'Todos', help: true, parlay: [], tot: {} };
+  const PL_KEY = 'laLinea.miParlay.s8';
+  try { const sv = JSON.parse(localStorage.getItem(PL_KEY) || '[]'); if (Array.isArray(sv)) state.parlay = sv.filter(x => x && ((x.pid && x.stat) || (x.kind === 'total' && x.game))); } catch (e) {}
+  function savePl() { try { localStorage.setItem(PL_KEY, JSON.stringify(state.parlay)); } catch (e) {} updatePlChip(); }
+  function updatePlChip() { const c = document.getElementById('pl-chip'); if (!c) return; c.hidden = !state.parlay.length; c.textContent = 'Mi parlay · ' + state.parlay.length + (state.parlay.length === 1 ? ' pierna' : ' piernas'); }
 
   const $ = id => document.getElementById(id);
   const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -1355,6 +1391,7 @@ footer { background: transparent; }
       (g.mapa ? '<div class="mapa" aria-label="Mapa del partido"><div class="mapa-h"><b>Mapa del partido</b><span>Qué tan blanda es cada defensa por posición · # de 32 que más permite · barra = más blanda</span></div>' +
         g.mapa.map(m => '<div class="mapa-row"><div class="mapa-lbl"><span><b>' + esc(m.ataca) + '</b>ataca a la defensa de ' + esc(m.defiende) + '</span></div>' +
           m.celdas.map(c => '<div class="mcell ' + c.lectura + '" title="' + esc(c.lectura) + '"><span class="mp">' + c.pos + '</span><span class="mr">#' + c.rank + '</span><span class="mi">' + sgn(c.indice) + ' vs prom.</span><span class="mb" style="--w:' + ((33 - c.rank) / 32 * 100).toFixed(1) + '%"></span></div>').join('') + '</div>').join('') + '</div>' : '') +
+      (g.total ? totCard(g) : '') +
       '<div class="defs">' + g.defensas.map(t => '<div class="def">' + ico('shield') + '<span>' + esc(t) + '</span></div>').join('') + '<p class="rank-note">Ranking de defensas: #1 = la que más permite (la más blanda), #32 = la que menos permite (la más dura). Favorable #1-10, Intermedio #11-21, Difícil #22-32.</p></div>' +
       '<div class="filterbar">' + posFilter() +
         '<span class="legend"><span><span class="star">★</span> favorito</span><span>Recuadro negro = titular</span><span class="chip Favorable">Matchup</span></span></div>' +
@@ -1472,6 +1509,7 @@ footer { background: transparent; }
           '<button type="button" id="ln-plus" aria-label="Subir 0.5">+</button></div>' +
           '<button type="button" class="reset" id="ln-reset">' + ico('reset') + 'Volver a la línea justa (' + fmt(s.linea_sugerida, s.linea_sugerida % 1 ? 1 : 0) + ')</button>' +
           '<span class="hint" id="ln-hint"></span>' +
+          '<button type="button" class="addleg" id="ln-add">+ Agregar a mi parlay</button>' +
         '</div>' +
         '<span class="hint fairnote">Línea justa: donde la probabilidad queda más cerca de 50%. ▼ marca la línea justa; la raya punteada, la proyección.</span>' +
       '</div>';
@@ -1486,6 +1524,12 @@ footer { background: transparent; }
     $('ln-minus').addEventListener('click', () => set(getLine(j, s) - 0.5));
     $('ln-plus').addEventListener('click', () => set(getLine(j, s) + 0.5));
     $('ln-reset').addEventListener('click', () => set(s.linea_sugerida));
+    $('ln-add').addEventListener('click', () => {
+      const L = getLine(j, s); const i = state.parlay.findIndex(x => x.pid === j.player_id && x.stat === s.key);
+      if (i >= 0) state.parlay[i].linea = L; else state.parlay.push({ pid: j.player_id, stat: s.key, linea: L });
+      savePl(); $('ln-add').textContent = '✓ En tu parlay (' + state.parlay.length + ')';
+      if (state.view === 'favoritos') renderFavList();
+    });
   }
 
   /* número animado: cuenta del valor anterior al nuevo; respeta prefers-reduced-motion */
@@ -1626,14 +1670,87 @@ footer { background: transparent; }
       '<span class="fr-go" aria-hidden="true">›</span>' +
       '</button></li>';
   }
+  function totCard(g) {
+    const L = g.partido in state.tot ? state.tot[g.partido] : g.total.linea;
+    const po = totProb(g, 'over', L), pu = 1 - po;
+    return '<div class="totc" id="totc"><div class="totc-h"><b>Puntos totales del partido</b><span>Casa: ' + fmt(g.total.linea, 1) + ' (' + esc(g.visitante) + ' ' + fmt(g.total.pts_visita, 1) + ' · ' + esc(g.local) + ' ' + fmt(g.total.pts_local, 1) + ' esperados)</span></div>' +
+      '<div class="totc-row"><label for="tot-num" style="font-weight:600">Línea</label><div class="num"><button type="button" data-totstep="-0.5" aria-label="Bajar 0.5">−</button>' +
+        '<input id="tot-num" type="number" step="0.5" min="10" max="100" value="' + L + '" data-totgame="' + esc(g.partido) + '"><button type="button" data-totstep="0.5" aria-label="Subir 0.5">+</button></div>' +
+        '<div class="side"><span class="k">Más de ' + fmt(L, L % 1 ? 1 : 0) + '</span><span class="v">' + pct(po) + '</span><button type="button" class="loadpl" data-addtot="over">+ Más de a mi parlay</button></div>' +
+        '<div class="side"><span class="k">Menos de ' + fmt(L, L % 1 ? 1 : 0) + '</span><span class="v">' + pct(pu) + '</span><button type="button" class="loadpl" data-addtot="under">+ Menos de a mi parlay</button></div></div>' +
+      '<small>' + esc(g.total.nota) + '</small></div>';
+  }
   function parlayCard(x, withGame) {
     if (!x) return '';
     if (!x.piernas || !x.piernas.length) return '<div class="parlay"><div class="parlay-h"><b>' + (withGame ? 'Parlay · ' + esc(x.partido) : 'Parlay del partido') + '</b><span class="st">Sin parlay</span></div><p class="none" style="margin:0;font-size:14px">No hay dos piernas compatibles que el modelo vea con 50% o más (sin juntar piernas que se estorban).</p></div>';
     const title = x.tipo === 'Por partido' ? (withGame ? 'Parlay · ' + esc(x.partido) : 'Parlay del partido') : esc(x.tipo) + ' piernas';
     return '<div class="parlay' + (x.cumple ? ' ok' : '') + (x.moderado ? ' mod' : '') + '"><div class="parlay-h"><b>' + title + '</b><span class="st">' + (x.etiqueta ? esc(x.etiqueta) : (x.cumple ? 'Cumple la expectativa' : (x.flexible ? 'No cumple (piernas más débiles)' : 'No cumple la expectativa'))) + '</span></div>' +
       '<ol class="legs">' + x.piernas.map(l => '<li><span><b>' + esc(l.jugador) + '</b> · ' + esc(l.etiqueta) + ' ' + esc(viewLine(l)) + '<br><small>' + l.pos + ' ' + esc(l.equipo) + (x.tipo !== 'Por partido' ? ' · ' + esc(l.partido) : '') + ' · matchup ' + esc(l.lectura.toLowerCase()) + ' (#' + l.rival_rank + ')' + (l.nota ? ' · ' + esc(l.nota) : '') + '</small></span><span class="p">' + pct(l.prob) + '</span></li>').join('') + '</ol>' +
-      '<div class="parlay-f"><span>Probabilidad de que se cumplan todas: <b>' + pct(x.prob) + '</b></span><span>Cuota justa del modelo: <b>' + fmt(x.cuota_justa, 2) + '</b></span></div></div>';
+      '<div class="parlay-f"><span>Probabilidad de que se cumplan todas: <b>' + pct(x.prob) + '</b></span><span>Cuota justa del modelo: <b>' + fmt(x.cuota_justa, 2) + '</b></span>' +
+        '<button type="button" class="loadpl" data-loadpl="' + (PLREG.push(x.piernas) - 1) + '">Usar en mi parlay</button></div></div>';
   }
+  const PL_T = { 2: [0.40, 0.30], 3: [0.27, 0.20], 4: [0.20, 0.14], 5: [0.15, 0.09], 6: [0.10, 0.06] };
+  const plT = n => n <= 1 ? [0.55, 0.45] : (PL_T[n] || [0.10 * Math.pow(0.65, n - 6), 0.06 * Math.pow(0.6, n - 6)]);
+  function erf(x) { const sg = x < 0 ? -1 : 1; x = Math.abs(x); const t = 1 / (1 + 0.3275911 * x);
+    const y = 1 - (((((1.061405429 * t - 1.453152027) * t) + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * Math.exp(-x * x); return sg * y; }
+  const ncdf = z => 0.5 * (1 + erf(z / Math.SQRT2));
+  function totProb(g, side, L) { const T = g.total; const z = (L - T.media) / T.sd; return side === 'over' ? 1 - ncdf(z) : ncdf(z); }
+  function legInfo(x) {
+    if (x.kind === 'total') {
+      const g = gameBy.get(x.game); if (!g || !g.total) return null;
+      const p = totProb(g, x.side, x.linea);
+      return { x, total: true, g, p, name: g.partido, partido: g.partido, label: 'Puntos totales · ' + (x.side === 'over' ? 'Más de ' : 'Menos de ') + fmt(x.linea, x.linea % 1 ? 1 : 0),
+               j: { player_id: 'T|' + g.partido, jugador: g.partido + ' (total)', equipo: null, pos: null, partido: g.partido, estado: 'OK' }, s: { lectura: 'Intermedio', etiqueta: 'Puntos totales', rival_rank: '—' } };
+    }
+    const j = byId.get(x.pid); if (!j) return null; const s = j.stats.find(t => t.key === x.stat); if (!s) return null;
+    return { x, j, s, p: Props.probLlegar(s, x.linea, M), name: j.jugador, partido: j.partido, label: s.etiqueta + ' · ' + lineText(s, x.linea) };
+  }
+  function evalParlay(legs) {
+    const L = legs.map(legInfo).filter(Boolean); const n = L.length; if (!n) return null;
+    let prob = 1; L.forEach(l => { prob *= l.p; });
+    const warns = [], hard = [];
+    const seen = {};
+    L.forEach(l => { seen[l.j.player_id] = (seen[l.j.player_id] || 0) + 1; });
+    Object.keys(seen).forEach(pid => { if (seen[pid] > 1) hard.push(byId.get(pid).jugador + ' aparece en ' + seen[pid] + ' piernas: dependen del mismo jugador.'); });
+    for (let a = 0; a < n; a++) for (let b = a + 1; b < n; b++) {
+      const A = L[a].j, B = L[b].j; if (A.player_id === B.player_id) continue;
+      if (L[a].total && L[b].total && A.partido === B.partido) { hard.push('Dos líneas de puntos totales del mismo partido (' + A.partido + ').'); continue; }
+      if (L[a].total || L[b].total) { if (A.partido === B.partido) warns.push('El total de puntos y ' + (L[a].total ? B.jugador : A.jugador) + ' dependen del mismo partido: si hay muchos puntos suelen ir juntos.'); continue; }
+      if (A.equipo === B.equipo && A.pos === 'RB' && B.pos === 'RB') hard.push(A.jugador + ' y ' + B.jugador + ' son RB del mismo equipo: se quitan carga.');
+      else if (A.equipo === B.equipo && (A.pos === 'QB') !== (B.pos === 'QB')) warns.push(A.jugador + ' y ' + B.jugador + ' van juntos (QB y su receptor): si falla uno, suele fallar el otro.');
+      else if (A.partido === B.partido) warns.push(A.jugador + ' y ' + B.jugador + ' están en el mismo partido: el guion del juego afecta a ambos.');
+    }
+    L.forEach(l => {
+      if (l.j.estado === 'Duda') warns.push(l.j.jugador + ': en duda por lesión.');
+      if (l.j.estado === 'Pendiente') warns.push(l.j.jugador + ': reporte de lesiones pendiente.');
+      if (l.total) { if (l.p < 0.5) warns.push('Puntos totales ' + l.partido + ': el modelo ve más probable lo contrario (' + pct(l.p) + ').'); return; }
+      if (l.s.lectura === 'Difícil') warns.push(l.j.jugador + ': matchup difícil en ' + l.s.etiqueta.toLowerCase() + ' (#' + l.s.rival_rank + ' de 32).');
+      if (l.p < 0.5) warns.push(l.j.jugador + ': el modelo ve más probable que NO llegue a ' + lineText(l.s, l.x.linea) + ' (' + pct(l.p) + ').');
+    });
+    const [tRec, tMod] = plT(n);
+    const legsOk = L.every(l => l.p >= 0.55 && (l.total || (l.s.lectura !== 'Difícil' && l.j.estado !== 'Duda')));
+    let v = prob >= tRec && legsOk && !hard.length ? 'rec' : (prob >= tMod && !hard.length ? 'mod' : 'arr');
+    const weakest = L.slice().sort((a, b) => a.p - b.p)[0];
+    return { L, n, prob, warns, hard, v, tRec, tMod, weakest };
+  }
+  function myParlayHtml() {
+    const E = evalParlay(state.parlay);
+    if (!E) return '<section class="mine" aria-labelledby="mine-h"><h3 id="mine-h">Arma tu parlay</h3><p class="empty-help">Abre la ficha de cualquier jugador, elige la estadística, mueve la línea y toca <b>+ Agregar a mi parlay</b>. También puedes tocar <b>Usar en mi parlay</b> en cualquier parlay sugerido y modificarlo. El modelo calcula qué tan probable es y si te lo recomienda.</p></section>';
+    const VT = { rec: 'Recomendable según el modelo', mod: 'Riesgo moderado', arr: 'Arriesgado' };
+    const why = [];
+    why.push('Probabilidad de que se cumplan todas: ' + pct(E.prob) + ' (para ' + E.n + (E.n === 1 ? ' pierna' : ' piernas') + ', recomendable desde ' + pct(E.tRec) + ' y moderado desde ' + pct(E.tMod) + ').');
+    if (E.v !== 'rec' && E.L.some(l => l.p < 0.55)) why.push('Para recomendarlo, cada pierna debe tener 55% o más.');
+    if (E.n > 1 && E.weakest) { const rest = E.prob / E.weakest.p; why.push('Pierna más débil: ' + E.weakest.name + ' (' + pct(E.weakest.p) + '). Si la quitas, sube a ' + pct(rest) + '.'); }
+    return '<section class="mine" aria-labelledby="mine-h"><h3 id="mine-h">Arma tu parlay</h3>' +
+      '<ol class="legs">' + E.L.map((l, i) => '<li><span>' + (l.total ? '<b>' + esc(l.partido) + '</b> · ' + esc(l.label) + '<br><small>Centro de la casa: ' + fmt(l.g.total.linea, 1) + ' puntos (±' + fmt(l.g.total.sd, 1) + ')</small>'
+          : '<b>' + esc(l.j.jugador) + '</b> · ' + esc(l.s.etiqueta) + ' · <b>' + esc(lineText(l.s, l.x.linea)) + '</b><br><small>' + l.j.pos + ' ' + esc(l.j.equipo) + ' · ' + esc(l.j.partido) + ' · matchup ' + esc(l.s.lectura.toLowerCase()) + ' (#' + l.s.rival_rank + ')</small>') +
+        '</span><span class="p">' + pct(l.p) + '</span><button type="button" class="rm" data-rmleg="' + i + '" aria-label="Quitar ' + esc(l.name) + '">Quitar</button></li>').join('') + '</ol>' +
+      '<div class="verdict-pl ' + E.v + '"><b class="v">' + VT[E.v] + '</b><span>Probabilidad: <b>' + pct(E.prob) + '</b> · Cuota justa del modelo: <b>' + fmt(1 / Math.max(E.prob, 1e-6), 2) + '</b></span>' +
+        '<ul>' + why.concat(E.hard.map(h => '⚠ ' + h), E.warns).map(t => '<li>' + esc(t) + '</li>').join('') + '</ul></div>' +
+      '<div class="mine-actions"><button type="button" data-clearpl="1">Vaciar mi parlay</button><span class="hint">Para cambiar una línea, abre la ficha del jugador, muévela y vuelve a tocar + Agregar (se actualiza).</span></div>' +
+      '<p class="empty-help" style="font-size:12.5px;color:var(--muted)">La probabilidad conjunta asume independencia entre piernas. Análisis de patrones, no garantía ni recomendación de apuesta. Solo mayores de 18 años.</p></section>';
+  }
+  const PLREG = [];
   function renderFavList() {
     const all = D.partidos.flatMap(g => g.favoritos);
     const pick = state.favF === 'Todos' ? all : all.filter(f => f.confianza === state.favF);
@@ -1662,7 +1779,7 @@ footer { background: transparent; }
         '<div class="grid">' + PL.largos.map(x => parlayCard(x, true)).join('') + '</div>' : '') +
       '<div class="frank-h" style="border:0;padding:6px 0 0"><h3 style="font-size:20px">Uno por partido</h3><span class="hint">' + esc(PL.nota) + '</span></div>' +
       '<div class="grid">' + PL.por_partido.map(x => parlayCard(x, true)).join('') + '</div></section>' : '';
-    $('fav-all').innerHTML = top5html + parlayhtml +
+    $('fav-all').innerHTML = myParlayHtml() + top5html + parlayhtml +
       '<div class="fav-toolbar"><div class="seg" role="group" aria-label="Filtrar favoritos por confianza">' +
         ['Todos', 'Alta', 'Media'].map(k => '<button type="button" data-favf="' + k + '" aria-pressed="' + (state.favF === k) + '">' + (k === 'Alta' ? '★ Alta' : k) + ' <span>' + cnt(k) + '</span></button>').join('') +
       '</div><span class="hint">Toca cualquier favorito para abrir su ficha y mover la línea.</span></div>' +
@@ -1747,6 +1864,7 @@ footer { background: transparent; }
     document.title = (v === 'favoritos' ? 'Mis favoritos · ' : '') + 'La Línea · NFL Semana 8';
   }
   function setView(v, push) {
+    if (v === 'favoritos') { try { renderFavList(); } catch (e) {} }
     if (state.open) closeSheet(true);
     showView(v);
     setHash('#' + v, push);
@@ -1782,6 +1900,24 @@ footer { background: transparent; }
   document.addEventListener('click', e => {
     const nav = e.target.closest('[data-view]');
     if (nav) { e.preventDefault(); setView(nav.dataset.view, true); return; }
+    const tb = e.target.closest('[data-totstep],[data-addtot]');
+    if (tb) {
+      const g = gameBy.get(state.game); if (!g || !g.total) return;
+      const cur = g.partido in state.tot ? state.tot[g.partido] : g.total.linea;
+      if (tb.dataset.totstep) { state.tot[g.partido] = Math.max(10, Math.round((cur + parseFloat(tb.dataset.totstep)) * 2) / 2); const c = $('totc'); if (c) c.outerHTML = totCard(g); }
+      else { const side = tb.dataset.addtot; state.parlay = state.parlay.filter(x => !(x.kind === 'total' && x.game === g.partido)); state.parlay.push({ kind: 'total', game: g.partido, side, linea: cur }); savePl(); tb.textContent = '✓ Agregado'; }
+      return;
+    }
+    const pl = e.target.closest('[data-rmleg],[data-clearpl],[data-loadpl],#pl-chip');
+    if (pl) {
+      if (pl.id === 'pl-chip') { if (state.open) closeSheet(false); setView('favoritos', true); setTimeout(() => { const m = document.querySelector('.mine'); if (m) m.scrollIntoView({ block: 'start' }); }, 50); return; }
+      if (pl.dataset.rmleg != null) state.parlay.splice(+pl.dataset.rmleg, 1);
+      else if (pl.dataset.clearpl) state.parlay = [];
+      else if (pl.dataset.loadpl != null) { state.parlay = (PLREG[+pl.dataset.loadpl] || []).map(l => ({ pid: l.player_id, stat: l.stat, linea: l.linea })); }
+      savePl(); renderFavList();
+      if (pl.dataset.loadpl != null) { if (state.view !== 'favoritos') setView('favoritos', true); setTimeout(() => { const m = document.querySelector('.mine'); if (m) m.scrollIntoView({ block: 'start' }); }, 50); }
+      return;
+    }
     const t = e.target.closest('[data-game],[data-pid],[data-pos],[data-stat],[data-open],[data-favf],[data-goto],[data-help]');
     if (!t) return;
     if (t.dataset.game) {
@@ -1797,6 +1933,9 @@ footer { background: transparent; }
     else if (t.dataset.help) { state.help = false; renderRoster(); }
   });
   $('q').addEventListener('input', e => { state.q = e.target.value.trim(); renderGames(); renderRoster(); });
+  document.addEventListener('change', e => {
+    if (e.target && e.target.id === 'tot-num') { const g = gameBy.get(e.target.dataset.totgame); const v = parseFloat(e.target.value); if (g && !isNaN(v)) { state.tot[g.partido] = Math.max(10, Math.round(v * 2) / 2); const c = $('totc'); if (c) c.outerHTML = totCard(g); } }
+  });
   window.addEventListener('hashchange', route);
   window.addEventListener('popstate', route);
 
@@ -1807,7 +1946,7 @@ footer { background: transparent; }
       state.pid = firstFav ? firstFav.player_id : D.jugadores[0].player_id;
       state.game = byId.get(state.pid).partido;
     }
-    renderGames(); renderRoster(); renderFicha(); renderFav(); route();
+    renderGames(); renderRoster(); renderFicha(); renderFav(); route(); updatePlChip();
     if (state.q) $('q').value = state.q;
   }
   window.claude?.hot?.snapshot?.(() => ({ game: state.game, pos: state.pos, pid: state.pid, statKey: state.statKey, lines: state.lines, q: state.q }));

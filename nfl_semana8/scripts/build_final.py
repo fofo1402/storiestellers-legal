@@ -211,21 +211,27 @@ top5 = dict(picks=[dict(rank=i + 1, rol=('Alta' if c['confianza'] == 'Alta' else
                        por_que=(c['por_que'][0] if c['por_que'] else ''), riesgo=c['riesgo']) for i, c in enumerate(top)],
             prob_todos=pall, esperados=sum(c['prob'] for c in top), excluidos=excl,
             nota='Son los 5 con mayor probabilidad según el modelo, no apuestas seguras: cada uno se cumple aprox. 6 a 7 de cada 10 veces y los 5 juntos mucho menos.')
-# ---------- Parlays del modelo ----------
-# Piernas posibles: jugadores con participación decente, sanos (sin designación), 4+ juegos, estadística con volumen mínimo,
-# matchup no Difícil en esa estadística y >= 55% de superar su promedio. Reglas para no juntar piernas que se estorban:
-# una pierna por jugador; no dos RB del mismo equipo; no un QB con un receptor de su mismo equipo (van juntos y el % real se infla).
-# Probabilidad conjunta = producto (aprox., asumiendo independencia).
+# ---------- Parlays del modelo (variados: posiciones y estadísticas distintas) ----------
+# Piernas sólidas: jugador con participación decente, sano, 4+ juegos, estadística con volumen mínimo, matchup no Difícil y
+# probabilidad de superar su promedio >= 55% (QB) o >= 53% (RB, WR, TE; sus estadísticas varían más). Reglas para no juntar
+# piernas que se estorban: una pierna por jugador; no dos RB del mismo equipo; no QB con su propio receptor.
+# Reglas de variedad: como máximo 1 de cada 3 piernas puede ser de QB y 1 de cada 3 de TD; no más de 2 piernas de la misma
+# estadística; en parlays de 3+ piernas, al menos un WR o TE. Probabilidad conjunta = producto (asume independencia).
+from itertools import combinations as _comb
+import math as _m
+TDK = {'td', 'pass_td'}
+MINP = {'QB': 0.55, 'RB': 0.53, 'WR': 0.53, 'TE': 0.53}
 def legs_of(game, flexible=False):
     out = []
     for pl in players:
-        if pl['partido'] != game or not pl['stats'] or not decent(pl): continue
+        if (game and pl['partido'] != game) or not pl['stats'] or not decent(pl): continue
         if flexible:
             if pl['estado'] == 'Duda' or pl['pj'] < 3: continue
         elif pl['estado'] != 'OK' or pl['pj'] < 4: continue
         for s in pl['stats']:
-            if s['dist'].get('dist') == 'zero' or not meaningful(s) or s['lectura'] == 'Difícil' or s['prob_superar_promedio'] < (0.50 if flexible else 0.55): continue
-            out.append(dict(player_id=pl['player_id'], jugador=pl['jugador'], pos=pl['pos'], equipo=pl['equipo'], partido=game, stat=s['key'], etiqueta=s['etiqueta'],
+            if s['dist'].get('dist') == 'zero' or not meaningful(s) or s['lectura'] == 'Difícil': continue
+            if s['prob_superar_promedio'] < (0.50 if flexible else MINP[pl['pos']]): continue
+            out.append(dict(player_id=pl['player_id'], jugador=pl['jugador'], pos=pl['pos'], equipo=pl['equipo'], partido=pl['partido'], stat=s['key'], etiqueta=s['etiqueta'],
                             linea=s['linea_promedio'], prob=s['prob_superar_promedio'], lectura=s['lectura'], rival_rank=s['rival_rank'],
                             nota=('' if (pl['estado'] == 'OK' and pl['pj'] >= 4) else (pl['estado_lesion'] if pl['estado'] != 'OK' else 'muestra corta'))))
     return out
@@ -234,95 +240,115 @@ def compatible(a, b):
     if a['equipo'] == b['equipo'] and a['pos'] == 'RB' and b['pos'] == 'RB': return False
     if a['equipo'] == b['equipo'] and 'QB' in (a['pos'], b['pos']) and a['pos'] != b['pos']: return False
     return True
-def best_combo(pool, n):
-    pool = sorted(pool, key=lambda l: -l['prob'])[:14]
+def varied(legs):
+    n = len(legs); cap = max(1, _m.ceil(n / 3))
+    if sum(1 for l in legs if l['pos'] == 'QB') > cap or sum(1 for l in legs if l['stat'] in TDK) > cap: return False
+    cnt = {}
+    for l in legs: cnt[l['stat']] = cnt.get(l['stat'], 0) + 1
+    if max(cnt.values()) > 2: return False
+    if n >= 3 and not any(l['pos'] in ('WR', 'TE') for l in legs): return False
+    return True
+def prod(legs):
+    pr = 1.0
+    for l in legs: pr *= l['prob']
+    return pr
+def best_combo(pool, n, need_var=True, distinct_games=False):
+    pool = sorted(pool, key=lambda l: -l['prob'])[:24]
     best = None
-    from itertools import combinations
-    for combo in combinations(pool, n):
-        if all(compatible(x, y) for x, y in combinations(combo, 2)):
-            pr = 1.0
-            for l in combo: pr *= l['prob']
-            if best is None or pr > best[0]: best = (pr, list(combo))
+    for combo in _comb(pool, n):
+        if distinct_games and len({l['partido'] for l in combo}) < n: continue
+        if not all(compatible(x, y) for x, y in _comb(combo, 2)): continue
+        if need_var and not varied(combo): continue
+        pr = prod(combo)
+        if best is None or pr > best[0]: best = (pr, list(combo))
     return best
-UMBRAL = {2: 0.40, 3: 0.27}   # cumple la expectativa: 2 piernas >= 40%; 3 piernas >= 27%
+def mk(tipo, piernas, etiqueta=None, **kw):
+    pr = prod(piernas)
+    return dict(tipo=tipo, etiqueta=etiqueta, partido=kw.get('partido', 'Varios partidos'), piernas=piernas, prob=pr, cuota_justa=1 / pr,
+                cumple=kw.get('cumple', False), flexible=kw.get('flexible', False), moderado=kw.get('moderado', False))
+UMBRAL = {2: 0.40, 3: 0.27}
 parlays = []
 for g in partidos:
-    b = best_combo(legs_of(g['partido']), 2); flex = False
+    strict = legs_of(g['partido']); b = best_combo(strict, 2); flex = False; note = None
+    if not b: b = best_combo(strict, 2, need_var=False); note = 'Sin variedad posible en este partido' if b else None
     if not b: b = best_combo(legs_of(g['partido'], True), 2); flex = True
-    if b: parlays.append(dict(tipo='Por partido', partido=g['partido'], piernas=b[1], prob=b[0], cuota_justa=1 / b[0], cumple=(b[0] >= UMBRAL[2] and not flex), flexible=flex))
-    else: parlays.append(dict(tipo='Por partido', partido=g['partido'], piernas=[], prob=None, cuota_justa=None, cumple=False, flexible=True))
-    g['parlay'] = parlays[-1]
-# generales: mejores piernas de partidos distintos (una por partido)
-best_by_game = {}
-for g in partidos:
-    for l in legs_of(g['partido']):
-        if g['partido'] not in best_by_game or l['prob'] > best_by_game[g['partido']]['prob']: best_by_game[g['partido']] = l
-cross = sorted(best_by_game.values(), key=lambda l: -l['prob'])
+    if b: x = mk('Por partido', b[1], note, partido=g['partido'], cumple=(b[0] >= UMBRAL[2] and not flex), flexible=flex)
+    else: x = dict(tipo='Por partido', partido=g['partido'], piernas=[], prob=None, cuota_justa=None, cumple=False, flexible=True)
+    parlays.append(x); g['parlay'] = x
+pool_all = sorted(legs_of(None), key=lambda l: -l['prob'])
 gen = []
 for n in (2, 3):
-    if len(cross) >= n:
-        pr = 1.0
-        for l in cross[:n]: pr *= l['prob']
-        gen.append(dict(tipo=f'General de {n}', partido='Varios partidos', piernas=cross[:n], prob=pr, cuota_justa=1 / pr, cumple=pr >= UMBRAL[n]))
+    b = best_combo(pool_all, n, distinct_games=True)
+    if b: gen.append(mk(f'General de {n}', b[1], None, cumple=b[0] >= UMBRAL[n]))
 cands = [x for x in parlays if x['piernas']] + gen
 ok = sorted([x for x in cands if x['cumple']], key=lambda x: -x['prob'])
 mejor = max(cands, key=lambda x: x['prob']) if cands else None
 eleccion = dict(cumplen=ok, ninguno=(len(ok) == 0), me_quedaria=(None if ok else mejor),
-                regla='Cumple la expectativa si el parlay de 2 tiene 40% o más (o el de 3, 27% o más) según el modelo.')
-# ---------- Más opciones: riesgo moderado (piernas sólidas de partidos distintos) ----------
-from itertools import combinations as _comb
-pool_all = []
-for g in partidos: pool_all += legs_of(g['partido'])
-pool_all = sorted(pool_all, key=lambda l: -l['prob'])[:40]
-BANDA = {2: (0.30, 0.40), 3: (0.20, 0.27)}
+                regla='Cumple la expectativa si el parlay de 2 tiene 40% o más (o el de 3, 27% o más) según el modelo. Todos los parlays combinan posiciones y estadísticas distintas.')
+# ---------- Más opciones: riesgo moderado, con variedad ----------
+BANDA = {2: (0.28, 0.40), 3: (0.18, 0.27)}
 cands_m = []
+top = pool_all[:30]
 for n in (2, 3):
-    for combo in _comb(pool_all, n):
-        if len({l['partido'] for l in combo}) < n: continue
-        pr = 1.0
-        for l in combo: pr *= l['prob']
-        lo, hi = BANDA[n]
-        if lo <= pr < hi:
-            ntd = sum(1 for l in combo if l['stat'] in ('td', 'pass_td'))
-            cands_m.append((pr, n, ntd, combo))
+    for combo in _comb(top, n):
+        if len({l['partido'] for l in combo}) < n or not all(compatible(x, y) for x, y in _comb(combo, 2)) or not varied(combo): continue
+        pr = prod(combo); lo, hi = BANDA[n]
+        if lo <= pr < hi: cands_m.append((pr, n, combo))
 cands_m.sort(key=lambda x: -x[0])
 uso = {}; moderados = []
-def pick(filtro, n, k):
+def pick(filtro, n, k, nombre):
     got = 0
-    for pr, nn, ntd, combo in cands_m:
+    for pr, nn, combo in cands_m:
         if got >= k: break
-        if nn != n or not filtro(ntd, nn): continue
-        keys = [(l['player_id'], l['stat']) for l in combo]
+        if nn != n or not filtro(combo): continue
         if any(uso.get(l['player_id'], 0) >= 2 for l in combo): continue
-        if any(set(keys) == set((l['player_id'], l['stat']) for l in m['piernas']) for m in moderados): continue
+        keys = {(l['player_id'], l['stat']) for l in combo}
+        if any(keys == {(l['player_id'], l['stat']) for l in m['piernas']} for m in moderados): continue
         for l in combo: uso[l['player_id']] = uso.get(l['player_id'], 0) + 1
-        tipo = ('Sin TD' if ntd == 0 else ('Mixto' if ntd < nn else 'Solo TD'))
-        moderados.append(dict(tipo=f'Moderado de {nn}', etiqueta=f'Riesgo moderado · {tipo}', partido='Varios partidos', piernas=list(combo), prob=pr, cuota_justa=1 / pr, cumple=False, moderado=True))
-        got += 1
-pick(lambda ntd, n: ntd == 0, 2, 3)          # 2 piernas sin TD
-pick(lambda ntd, n: 0 < ntd < n, 2, 2)       # 2 piernas mixto
-pick(lambda ntd, n: ntd == 0, 3, 2)          # 3 piernas sin TD
-pick(lambda ntd, n: ntd <= 1, 3, 2)          # 3 piernas con a lo más un TD
+        moderados.append(mk(f'Moderado de {nn}', list(combo), 'Riesgo moderado · ' + nombre, moderado=True)); got += 1
+pos = lambda c: {l['pos'] for l in c}
+pick(lambda c: 'QB' not in pos(c), 2, 2, 'sin QB')
+pick(lambda c: pos(c) & {'WR', 'TE'} and 'QB' in pos(c), 2, 2, 'QB + receptor de otro partido')
+pick(lambda c: 'RB' in pos(c), 2, 1, 'con RB')
+pick(lambda c: len(pos(c)) >= 3, 3, 2, 'tres posiciones distintas')
+pick(lambda c: 'QB' not in pos(c), 3, 1, 'sin QB')
 moderados.sort(key=lambda m: (len(m['piernas']), -m['prob']))
-# ---------- Parlays largos (4 a 6 piernas): la mejor pierna de cada partido, partidos distintos ----------
-def best_per_game(no_td=False):
-    bg = {}
-    for l in pool_all if not no_td else [x for g in partidos for x in legs_of(g['partido'])]:
-        if no_td and l['stat'] in ('td', 'pass_td'): continue
-        if l['partido'] not in bg or l['prob'] > bg[l['partido']]['prob']: bg[l['partido']] = l
-    return sorted(bg.values(), key=lambda l: -l['prob'])
+# ---------- Parlays largos (4 a 6 piernas) con variedad ----------
+def greedy_long(n, no_td=False):
+    seeds = [l for l in pool_all if l['pos'] in ('WR', 'TE') and not (no_td and l['stat'] in TDK)]
+    chosen = seeds[:1]
+    for l in pool_all:
+        if l in chosen: continue
+        if no_td and l['stat'] in TDK: continue
+        if any(c['partido'] == l['partido'] for c in chosen): continue
+        trial = chosen + [l]
+        cap = max(1, _m.ceil(n / 3))
+        if sum(1 for c in trial if c['pos'] == 'QB') > cap or sum(1 for c in trial if c['stat'] in TDK) > cap: continue
+        cnt = {}
+        for c in trial: cnt[c['stat']] = cnt.get(c['stat'], 0) + 1
+        if max(cnt.values()) > 2: continue
+        chosen = trial
+        if len(chosen) == n: break
+    if len(chosen) == n and any(c['pos'] in ('WR', 'TE') for c in chosen): return chosen
+    return None
 largos = []
 for no_td in (False, True):
-    bests = best_per_game(no_td)
     for n in (4, 5, 6):
-        if len(bests) < n: continue
-        legs = bests[:n]; pr = 1.0
-        for l in legs: pr *= l['prob']
-        largos.append(dict(tipo=f'Largo de {n}', etiqueta=f"{n} piernas · {'sin TD' if no_td else 'la más probable'}", partido='Varios partidos', piernas=legs, prob=pr,
-                           cuota_justa=1 / pr, cumple=False, moderado=True, largo=True))
+        legs = greedy_long(n, no_td)
+        if legs: largos.append(dict(mk(f'Largo de {n}', legs, f"{n} piernas · {'sin TD' if no_td else 'la más probable con variedad'}", moderado=True), largo=True))
+# ---------- Puntos totales del partido (centro = total de la casa; variación real de 2026) ----------
+import pandas as _pd
+_g = _pd.read_csv('/home/user/raw/nflverse/games.csv', low_memory=False); _g = _g[(_g.season == 2026) & (_g.game_type == 'REG')]
+_pl = _g[_g.home_score.notna() & _g.total_line.notna()]
+SD_TOT = float(((_pl.home_score + _pl.away_score) - _pl.total_line).std())
+for g in partidos:
+    r = _g[(_g.week == 8) & (_g.away_team == g['visitante']) & (_g.home_team == g['local'])].iloc[0]
+    g['total'] = dict(linea=float(r.total_line), media=float(r.total_line), sd=SD_TOT,
+                      pts_visita=float((r.total_line - r.spread_line) / 2), pts_local=float((r.total_line + r.spread_line) / 2),
+                      nota=f'Centro: total de la casa ({r.total_line}). Variación real en 2026: ±{SD_TOT:.1f} puntos. Mi estimación por equipos fue menos precisa que la línea de la casa, por eso no la uso.')
 parlay_info = dict(por_partido=parlays, generales=gen, eleccion=eleccion, moderados=moderados, largos=largos,
-                   regla_largo='Con más piernas el pago sube, pero la probabilidad cae rápido: aun con piernas de 60% a 70%, un parlay de 5 se cumple pocas veces.',
-                   regla_moderado='Riesgo moderado: 2 piernas entre 30% y 40%, o 3 piernas entre 20% y 27% de que se cumplan todas. Piernas de partidos distintos, sanas, con 4+ juegos y matchup no difícil.',
+                   regla_largo='Con más piernas el pago sube, pero la probabilidad cae rápido: aun con piernas de 55% a 70%, un parlay de 5 se cumple pocas veces.',
+                   regla_moderado='Riesgo moderado: 2 piernas entre 28% y 40%, o 3 piernas entre 18% y 27%. Partidos distintos, piernas sólidas y posiciones variadas.',
                    nota='Un parlay no es seguro: todas las piernas tienen que cumplirse. La probabilidad conjunta asume que las piernas son independientes; dentro de un mismo partido puede variar. La cuota justa es 1 / probabilidad: si la casa paga menos que eso, el modelo no le ve valor.')
 out = dict(metadatos=meta, partidos=partidos, jugadores=players, cambios=cambios, cambios_v2=cambios_v2, top5=top5, parlays=parlay_info)
 json.dump(out, open(E + 'props_data.json', 'w'), ensure_ascii=False, separators=(',', ':'))
