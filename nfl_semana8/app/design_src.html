@@ -1354,9 +1354,11 @@ footer { background: transparent; }
     if (state.q) {
       const q = norm(state.q);
       const hits = sortPlayers(D.jugadores.filter(j => norm(j.jugador).includes(q) || norm(j.equipo) === q));
+      const outHits = []; D.partidos.forEach(g => Object.keys(g.no_juegan || {}).forEach(t => (g.no_juegan[t] || []).forEach(txt => { if (norm(txt).includes(q) || norm(t) === q) outHits.push({ txt, equipo: t, partido: g.partido }); })));
       el.innerHTML = '<div class="results"><div class="results-head"><h2>Resultados</h2><span class="meta">' + hits.length + ' jugador(es) para “' + esc(state.q) + '”</span></div>' +
         '<div class="filterbar" style="position:static;margin:0;padding:10px 16px;background:var(--surface-2);border-bottom:1px solid var(--rule)">' + posFilter() + '</div>' +
-        (hits.length ? '<div class="plist">' + (grouped(fpos(hits), true) || '<p class="empty">Sin jugadores en esta posición.</p>') + '</div>' : '<p class="empty">Ningún jugador coincide. Prueba con el apellido o el equipo (ej. MIN).</p>') + '</div>';
+        (outHits.length ? '<div class="def" style="margin:8px 0">' + ico('alert') + '<span><b>No juegan esta semana (reporte final del viernes):</b> ' + outHits.map(o => esc(o.txt) + ' · ' + esc(o.equipo) + ' (' + esc(o.partido) + ')').join('; ') + '. Por eso no tienen ficha ni entran en los cálculos.</span></div>' : '') +
+        (hits.length ? '<div class="plist">' + (grouped(fpos(hits), true) || '<p class="empty">Sin jugadores en esta posición.</p>') + '</div>' : (outHits.length ? '' : '<p class="empty">Ningún jugador coincide. Prueba con el apellido o el equipo (ej. MIN).</p>')) + '</div>';
       return;
     }
     const g = gameBy.get(state.game);
@@ -1773,6 +1775,8 @@ footer { background: transparent; }
         (E.ninguno ? '<p><b>Ninguno cumple la expectativa.</b> Si tuviera que elegir uno, me quedaría con el más probable:</p>' + parlayCard(E.me_quedaria, true)
           : '<p>' + (E.cumplen.length === 1 ? 'Solo uno cumple la expectativa:' : 'Cumplen la expectativa ' + E.cumplen.length + ', del más probable al menos probable:') + '</p><div class="grid">' + E.cumplen.map(x => parlayCard(x, true)).join('') + '</div>') +
       '</div>' +
+      ((PL.seguros && PL.seguros.length) || (PL.generales && PL.generales.length) ? '<div class="frank-h" style="border:0;padding:6px 0 0"><h3 style="font-size:20px">Los más seguros vs. variados</h3><span class="hint">Los más seguros buscan solo la mayor probabilidad (suelen ser QB y TD de pase). Los variados mezclan posiciones y estadísticas; cuestan un poco de probabilidad.</span></div>' +
+        '<div class="grid">' + (PL.seguros || []).concat(PL.generales || []).map(x => parlayCard(x, true)).join('') + '</div>' : '') +
       (PL.moderados && PL.moderados.length ? '<div class="frank-h" style="border:0;padding:6px 0 0"><h3 style="font-size:20px">Más opciones · riesgo moderado</h3><span class="hint">' + esc(PL.regla_moderado) + '</span></div>' +
         '<div class="grid">' + PL.moderados.map(x => parlayCard(x, true)).join('') + '</div>' : '') +
       (PL.largos && PL.largos.length ? '<div class="frank-h" style="border:0;padding:6px 0 0"><h3 style="font-size:20px">Parlays largos · 4 a 6 piernas</h3><span class="hint">' + esc(PL.regla_largo) + '</span></div>' +

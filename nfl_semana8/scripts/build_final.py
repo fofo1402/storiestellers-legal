@@ -248,20 +248,30 @@ def varied(legs):
     if max(cnt.values()) > 2: return False
     if n >= 3 and not any(l['pos'] in ('WR', 'TE') for l in legs): return False
     return True
+LAMBDA = 0.18   # cada repetición (misma posición, misma estadística, o TD extra) debe "pagarse" con ~20% más de probabilidad
+def repeats(legs, extra=None):
+    pc, sc = {}, {}
+    for l in legs: pc[l['pos']] = pc.get(l['pos'], 0) + 1; sc[l['stat']] = sc.get(l['stat'], 0) + 1
+    td = sum(1 for l in legs if l['stat'] in TDK)
+    r = sum(max(0, c - 1) for c in pc.values()) + sum(max(0, c - 1) for c in sc.values()) + max(0, td - 1)
+    if extra:   # repetir jugadores o estadísticas ya usados en otras opciones
+        r += 0.5 * sum(1 for l in legs if (l['player_id'], l['stat']) in extra)
+    return r
+def score(legs, extra=None):
+    return sum(_m.log(l['prob']) for l in legs) - LAMBDA * repeats(legs, extra)
 def prod(legs):
     pr = 1.0
     for l in legs: pr *= l['prob']
     return pr
-def best_combo(pool, n, need_var=True, distinct_games=False):
+def best_combo(pool, n, need_var=True, distinct_games=False, extra=None):
     pool = sorted(pool, key=lambda l: -l['prob'])[:24]
     best = None
     for combo in _comb(pool, n):
         if distinct_games and len({l['partido'] for l in combo}) < n: continue
         if not all(compatible(x, y) for x, y in _comb(combo, 2)): continue
-        if need_var and not varied(combo): continue
-        pr = prod(combo)
-        if best is None or pr > best[0]: best = (pr, list(combo))
-    return best
+        sc = score(combo, extra) if need_var else sum(_m.log(l['prob']) for l in combo)
+        if best is None or sc > best[2]: best = (prod(combo), list(combo), sc)
+    return best[:2] if best else None
 def mk(tipo, piernas, etiqueta=None, **kw):
     pr = prod(piernas)
     return dict(tipo=tipo, etiqueta=etiqueta, partido=kw.get('partido', 'Varios partidos'), piernas=piernas, prob=pr, cuota_justa=1 / pr,
@@ -270,7 +280,6 @@ UMBRAL = {2: 0.40, 3: 0.27}
 parlays = []
 for g in partidos:
     strict = legs_of(g['partido']); b = best_combo(strict, 2); flex = False; note = None
-    if not b: b = best_combo(strict, 2, need_var=False); note = 'Sin variedad posible en este partido' if b else None
     if not b: b = best_combo(legs_of(g['partido'], True), 2); flex = True
     if b: x = mk('Por partido', b[1], note, partido=g['partido'], cumple=(b[0] >= UMBRAL[2] and not flex), flexible=flex)
     else: x = dict(tipo='Por partido', partido=g['partido'], piernas=[], prob=None, cuota_justa=None, cumple=False, flexible=True)
@@ -280,62 +289,62 @@ gen = []
 for n in (2, 3):
     b = best_combo(pool_all, n, distinct_games=True)
     if b: gen.append(mk(f'General de {n}', b[1], None, cumple=b[0] >= UMBRAL[n]))
-cands = [x for x in parlays if x['piernas']] + gen
+seguros = []
+for n in (2, 3):
+    b = best_combo(pool_all, n, need_var=False, distinct_games=True)
+    if b: seguros.append(dict(mk(f'Más seguro de {n}', b[1], 'Los más seguros · sin regla de variedad', cumple=b[0] >= UMBRAL[n]), seguro=True))
+for x in gen: x['etiqueta'] = 'Variado · posiciones mezcladas' + (' · cumple la expectativa' if x['cumple'] else '')
+cands = [x for x in parlays if x['piernas']] + gen + seguros
 ok = sorted([x for x in cands if x['cumple']], key=lambda x: -x['prob'])
 mejor = max(cands, key=lambda x: x['prob']) if cands else None
 eleccion = dict(cumplen=ok, ninguno=(len(ok) == 0), me_quedaria=(None if ok else mejor),
-                regla='Cumple la expectativa si el parlay de 2 tiene 40% o más (o el de 3, 27% o más) según el modelo. Todos los parlays combinan posiciones y estadísticas distintas.')
-# ---------- Más opciones: riesgo moderado, con variedad ----------
+                regla='Cumple la expectativa si el parlay de 2 tiene 40% o más (o el de 3, 27% o más) según el modelo. "Los más seguros" buscan solo la mayor probabilidad; los "variados" mezclan posiciones y estadísticas y por eso suelen tener un poco menos.')
+# ---------- Más opciones: riesgo moderado, con preferencia de variedad (dentro de cada parlay y entre opciones) ----------
 BANDA = {2: (0.28, 0.40), 3: (0.18, 0.27)}
-cands_m = []
 top = pool_all[:30]
-for n in (2, 3):
+moderados = []; usados = set(); uso = {}; firmas = {}
+for n, k in ((2, 5), (3, 4)):
+    cands_n = []
     for combo in _comb(top, n):
-        if len({l['partido'] for l in combo}) < n or not all(compatible(x, y) for x, y in _comb(combo, 2)) or not varied(combo): continue
+        if len({l['partido'] for l in combo}) < n or not all(compatible(x, y) for x, y in _comb(combo, 2)): continue
         pr = prod(combo); lo, hi = BANDA[n]
-        if lo <= pr < hi: cands_m.append((pr, n, combo))
-cands_m.sort(key=lambda x: -x[0])
-uso = {}; moderados = []
-def pick(filtro, n, k, nombre):
-    got = 0
-    for pr, nn, combo in cands_m:
-        if got >= k: break
-        if nn != n or not filtro(combo): continue
-        if any(uso.get(l['player_id'], 0) >= 2 for l in combo): continue
-        keys = {(l['player_id'], l['stat']) for l in combo}
-        if any(keys == {(l['player_id'], l['stat']) for l in m['piernas']} for m in moderados): continue
-        for l in combo: uso[l['player_id']] = uso.get(l['player_id'], 0) + 1
-        moderados.append(mk(f'Moderado de {nn}', list(combo), 'Riesgo moderado · ' + nombre, moderado=True)); got += 1
-pos = lambda c: {l['pos'] for l in c}
-pick(lambda c: 'QB' not in pos(c), 2, 2, 'sin QB')
-pick(lambda c: pos(c) & {'WR', 'TE'} and 'QB' in pos(c), 2, 2, 'QB + receptor de otro partido')
-pick(lambda c: 'RB' in pos(c), 2, 1, 'con RB')
-pick(lambda c: len(pos(c)) >= 3, 3, 2, 'tres posiciones distintas')
-pick(lambda c: 'QB' not in pos(c), 3, 1, 'sin QB')
+        if lo <= pr < hi: cands_n.append(combo)
+    for _ in range(k):
+        best = None
+        for combo in cands_n:
+            if any(uso.get(l['player_id'], 0) >= 2 for l in combo): continue
+            keys = {(l['player_id'], l['stat']) for l in combo}
+            if any(keys == {(l['player_id'], l['stat']) for l in m['piernas']} for m in moderados): continue
+            firma = tuple(sorted(l['pos'] for l in combo))
+            sc = score(combo, usados) - 0.15 * firmas.get(firma, 0)
+            if best is None or sc > best[0]: best = (sc, combo)
+        if not best: break
+        combo = best[1]
+        for l in combo: uso[l['player_id']] = uso.get(l['player_id'], 0) + 1; usados.add((l['player_id'], l['stat']))
+        firma = tuple(sorted(l['pos'] for l in combo)); firmas[firma] = firmas.get(firma, 0) + 1
+        cnt = {}
+        for l in combo: cnt[l['pos']] = cnt.get(l['pos'], 0) + 1
+        posset = [(f"{cnt[q]} {q}" if cnt[q] > 1 else q) for q in ['QB', 'RB', 'WR', 'TE'] if q in cnt]
+        moderados.append(mk(f'Moderado de {n}', list(combo), 'Riesgo moderado · ' + ' + '.join(posset), moderado=True))
 moderados.sort(key=lambda m: (len(m['piernas']), -m['prob']))
 # ---------- Parlays largos (4 a 6 piernas) con variedad ----------
 def greedy_long(n, no_td=False):
-    seeds = [l for l in pool_all if l['pos'] in ('WR', 'TE') and not (no_td and l['stat'] in TDK)]
-    chosen = seeds[:1]
-    for l in pool_all:
-        if l in chosen: continue
-        if no_td and l['stat'] in TDK: continue
-        if any(c['partido'] == l['partido'] for c in chosen): continue
-        trial = chosen + [l]
-        cap = max(1, _m.ceil(n / 3))
-        if sum(1 for c in trial if c['pos'] == 'QB') > cap or sum(1 for c in trial if c['stat'] in TDK) > cap: continue
-        cnt = {}
-        for c in trial: cnt[c['stat']] = cnt.get(c['stat'], 0) + 1
-        if max(cnt.values()) > 2: continue
-        chosen = trial
-        if len(chosen) == n: break
-    if len(chosen) == n and any(c['pos'] in ('WR', 'TE') for c in chosen): return chosen
-    return None
+    cand = [l for l in pool_all if not (no_td and l['stat'] in TDK)]
+    chosen = []
+    while len(chosen) < n:
+        best = None
+        for l in cand:
+            if any(c['partido'] == l['partido'] for c in chosen) or not all(compatible(c, l) for c in chosen): continue
+            sc = score(chosen + [l])
+            if best is None or sc > best[0]: best = (sc, l)
+        if not best: return None
+        chosen.append(best[1])
+    return chosen
 largos = []
 for no_td in (False, True):
     for n in (4, 5, 6):
         legs = greedy_long(n, no_td)
-        if legs: largos.append(dict(mk(f'Largo de {n}', legs, f"{n} piernas · {'sin TD' if no_td else 'la más probable con variedad'}", moderado=True), largo=True))
+        if legs: largos.append(dict(mk(f'Largo de {n}', legs, f"{n} piernas · {'sin TD' if no_td else 'con variedad'}", moderado=True), largo=True))
 # ---------- Puntos totales del partido (centro = total de la casa; variación real de 2026) ----------
 import pandas as _pd
 _g = _pd.read_csv('/home/user/raw/nflverse/games.csv', low_memory=False); _g = _g[(_g.season == 2026) & (_g.game_type == 'REG')]
@@ -346,7 +355,7 @@ for g in partidos:
     g['total'] = dict(linea=float(r.total_line), media=float(r.total_line), sd=SD_TOT,
                       pts_visita=float((r.total_line - r.spread_line) / 2), pts_local=float((r.total_line + r.spread_line) / 2),
                       nota=f'Centro: total de la casa ({r.total_line}). Variación real en 2026: ±{SD_TOT:.1f} puntos. Mi estimación por equipos fue menos precisa que la línea de la casa, por eso no la uso.')
-parlay_info = dict(por_partido=parlays, generales=gen, eleccion=eleccion, moderados=moderados, largos=largos,
+parlay_info = dict(por_partido=parlays, generales=gen, seguros=seguros, eleccion=eleccion, moderados=moderados, largos=largos,
                    regla_largo='Con más piernas el pago sube, pero la probabilidad cae rápido: aun con piernas de 55% a 70%, un parlay de 5 se cumple pocas veces.',
                    regla_moderado='Riesgo moderado: 2 piernas entre 28% y 40%, o 3 piernas entre 18% y 27%. Partidos distintos, piernas sólidas y posiciones variadas.',
                    nota='Un parlay no es seguro: todas las piernas tienen que cumplirse. La probabilidad conjunta asume que las piernas son independientes; dentro de un mismo partido puede variar. La cuota justa es 1 / probabilidad: si la casa paga menos que eso, el modelo no le ve valor.')
