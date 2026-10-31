@@ -196,7 +196,22 @@ meta.update(tipo_corrida='RECHECK FINAL', datos_al='lesiones al vie 30-oct · co
             'Lesiones: reporte final del viernes 30-oct (equipos y medios). CHI-SEA juega el lunes: su reporte final sale el sábado.',
             'Fuente de estadísticas: nflverse (datos oficiales de juego de la NFL). Sin cuotas ni líneas de casas de apuestas.'])
 meta.pop('formula', None); meta.pop('peso_w', None)
-out = dict(metadatos=meta, partidos=partidos, jugadores=players, cambios=cambios, cambios_v2=cambios_v2)
+# ---------- Top 5 del modelo: 2 de confianza alta + complementos más probables y confiables ----------
+allfav = [dict(c, partido=g['partido']) for g in partidos for c in g['favoritos']]
+alta5 = sorted([c for c in allfav if c['confianza'] == 'Alta'], key=lambda c: -c['prob'])
+media_ok = sorted([c for c in allfav if c['confianza'] != 'Alta' and c['estado'] == 'OK' and byp[c['player_id']]['pj'] >= 4], key=lambda c: -c['prob'])
+top = alta5[:5] + media_ok[:max(0, 5 - len(alta5[:5]))]
+cut = top[-1]['prob'] if top else 1
+excl = [dict(jugador=c['jugador'], partido=c['partido'], prob=c['prob'], motivo=('muestra corta (' + str(byp[c['player_id']]['pj']) + ' juegos)' if byp[c['player_id']]['pj'] < 4 else c['riesgo'] or 'riesgo de lesión'))
+        for c in allfav if c not in top and c['confianza'] != 'Alta' and c['prob'] > cut and (c['estado'] != 'OK' or byp[c['player_id']]['pj'] < 4)]
+pall = 1.0
+for c in top: pall *= c['prob']
+top5 = dict(picks=[dict(rank=i + 1, rol=('Alta' if c['confianza'] == 'Alta' else 'Complemento'), player_id=c['player_id'], jugador=c['jugador'], pos=c['pos'], equipo=c['equipo'],
+                       partido=c['partido'], stat=c['stat'], etiqueta=c['etiqueta'], linea=c['linea'], prob=c['prob'], lectura=c['lectura'], rival_rank=c['rival_rank'],
+                       por_que=(c['por_que'][0] if c['por_que'] else ''), riesgo=c['riesgo']) for i, c in enumerate(top)],
+            prob_todos=pall, esperados=sum(c['prob'] for c in top), excluidos=excl,
+            nota='Son los 5 con mayor probabilidad según el modelo, no apuestas seguras: cada uno se cumple aprox. 6 a 7 de cada 10 veces y los 5 juntos mucho menos.')
+out = dict(metadatos=meta, partidos=partidos, jugadores=players, cambios=cambios, cambios_v2=cambios_v2, top5=top5)
 json.dump(out, open(E + 'props_data.json', 'w'), ensure_ascii=False, separators=(',', ':'))
 json.dump(RAW['tests'], open(E + 'casos_prueba.json', 'w'), ensure_ascii=False, indent=0)
 nf = sum(len(v) for v in fav.values())

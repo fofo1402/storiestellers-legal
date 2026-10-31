@@ -671,6 +671,27 @@ nav.tabs a:not([aria-current="page"]) > span[aria-hidden] { color: inherit; }
 .seg button[aria-pressed="true"] span { background: var(--line); color: var(--line-ink); }
 
 .frank { padding: 0; overflow: hidden; }
+/* ---------- Top 5 del modelo ---------- */
+.top5 { padding: 0; overflow: hidden; margin-bottom: 14px; border: 2px solid var(--line); }
+.top5-h { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: baseline; padding: 14px 18px 10px; background: color-mix(in srgb, var(--line) 14%, var(--surface)); border-bottom: 1px solid var(--rule); }
+.top5-h h3 { font-size: 26px; font-weight: 900; text-transform: uppercase; }
+.top5-h .hint { font-size: 13px; color: var(--muted); }
+.t5rows { list-style: none; margin: 0; padding: 0; }
+.t5row { display: grid; grid-template-columns: 44px minmax(0, 1.3fr) minmax(0, 1.2fr) 88px; gap: 10px; align-items: center; padding: 10px 18px; border-bottom: 1px solid var(--rule); cursor: pointer; }
+.t5row:hover { background: var(--surface-2); }
+.t5row .n { font-family: var(--font-display); font-weight: 900; font-size: 30px; line-height: 1; color: var(--muted); }
+.t5row.Alta .n { color: var(--ink); }
+.t5row .who b { font-weight: 700; font-size: 16px; }
+.t5row .who small { display: block; color: var(--muted); font-size: 12.5px; }
+.t5row .what { font-size: 14px; }
+.t5row .what small { display: block; color: var(--muted); font-size: 12px; }
+.t5row .pp { font-family: var(--font-display); font-weight: 900; font-size: 28px; text-align: right; color: var(--turf); }
+.t5row .tag { font-size: 11px; font-weight: 700; text-transform: uppercase; border-radius: 4px; padding: 1px 6px; margin-left: 6px; }
+.t5row.Alta .tag { background: var(--line); color: var(--line-ink); }
+.t5row.Complemento .tag { border: 1.5px solid var(--rule-strong); color: var(--muted); }
+.t5foot { padding: 12px 18px 14px; font-size: 13.5px; color: var(--ink-2); display: grid; gap: 4px; }
+.t5foot b { color: var(--ink); }
+@media (max-width: 560px) { .t5row { grid-template-columns: 34px minmax(0, 1fr) 70px; } .t5row .what { grid-column: 2 / -1; grid-row: 2; } .t5row .pp { grid-row: 1; grid-column: 3; font-size: 24px; } }
 .frank-h { display: flex; align-items: baseline; gap: 6px 14px; flex-wrap: wrap; padding: 14px 18px 10px; border-bottom: 1px solid var(--rule); }
 .frank-h h3 { font-size: 24px; font-weight: 900; text-transform: uppercase; }
 .frows { list-style: none; margin: 0; padding: 0; }
@@ -1588,13 +1609,22 @@ footer { background: transparent; }
     const all = D.partidos.flatMap(g => g.favoritos);
     const pick = state.favF === 'Todos' ? all : all.filter(f => f.confianza === state.favF);
     const alta = pick.filter(f => f.confianza === 'Alta'), media = pick.filter(f => f.confianza !== 'Alta');
-    const ranked = pick.slice().sort((a, b) => b.prob - a.prob);
+    const ranked = pick.slice().sort((a, b) => (a.confianza === 'Alta' ? 0 : 1) - (b.confianza === 'Alta' ? 0 : 1) || b.prob - a.prob);
+    const T5 = D.top5;
+    const top5html = T5 && T5.picks.length ? '<section class="card top5" aria-labelledby="t5-h"><div class="top5-h"><h3 id="t5-h">Top 5 del modelo</h3><span class="hint">Los 2 de confianza alta + 3 complementos con mayor probabilidad (sanos y con 4+ juegos)</span></div>' +
+      '<ol class="t5rows">' + T5.picks.map(p => '<li class="t5row ' + p.rol + '" data-open="' + p.player_id + '" tabindex="0"><span class="n">' + p.rank + '</span>' +
+        '<span class="who"><b>' + esc(p.jugador) + '</b><span class="tag">' + (p.rol === 'Alta' ? '★ Alta' : 'Complemento') + '</span><small>' + p.pos + ' · ' + esc(p.partido) + '</small></span>' +
+        '<span class="what">' + esc(p.etiqueta) + ' · <b>' + esc(viewLine(p)) + '</b><small>Matchup ' + esc(p.lectura.toLowerCase()) + ' (#' + p.rival_rank + ' de 32 que más permite)</small></span>' +
+        '<span class="pp">' + pct(p.prob) + '</span></li>').join('') + '</ol>' +
+      '<div class="t5foot"><span><b>No son seguros:</b> cada uno se cumple aprox. ' + Math.round(Math.min(...T5.picks.map(p => p.prob)) * 100) + '% a ' + Math.round(Math.max(...T5.picks.map(p => p.prob)) * 100) + '% de las veces. Lo esperado es acertar unos ' + fmt(T5.esperados, 1) + ' de 5; que salgan los 5 juntos tiene alrededor de ' + Math.round(T5.prob_todos * 100) + '% de probabilidad.</span>' +
+        (T5.excluidos.length ? '<span>Fuera del Top 5 a propósito: ' + T5.excluidos.map(x => esc(x.jugador) + ' (' + pct(x.prob) + ', ' + esc(x.motivo) + ')').join('; ') + '.</span>' : '') +
+        '<span>Se recalcula el domingo en la mañana con los inactivos.</span></div></section>' : '';
     const cnt = k => k === 'Todos' ? all.length : all.filter(f => f.confianza === k).length;
-    $('fav-all').innerHTML =
+    $('fav-all').innerHTML = top5html +
       '<div class="fav-toolbar"><div class="seg" role="group" aria-label="Filtrar favoritos por confianza">' +
         ['Todos', 'Alta', 'Media'].map(k => '<button type="button" data-favf="' + k + '" aria-pressed="' + (state.favF === k) + '">' + (k === 'Alta' ? '★ Alta' : k) + ' <span>' + cnt(k) + '</span></button>').join('') +
       '</div><span class="hint">Toca cualquier favorito para abrir su ficha y mover la línea.</span></div>' +
-      '<section class="card frank" aria-labelledby="frank-h"><div class="frank-h"><h3 id="frank-h">Ranking rápido</h3><span class="hint">Ordenados por % de superar su propio promedio</span></div>' +
+      '<section class="card frank" aria-labelledby="frank-h"><div class="frank-h"><h3 id="frank-h">Ranking rápido</h3><span class="hint">Primero confianza alta; después por % de superar su propio promedio</span></div>' +
         '<ol class="frows">' + ranked.map(favRow).join('') + '</ol></section>' +
       (alta.length ? '<div class="fav-group"><div class="gh"><h3>Confianza alta</h3><span class="count">' + alta.length + '</span></div><div class="fav-list">' + alta.map(f => favCard(f, true)).join('') + '</div></div>' : '') +
       (media.length ? '<div class="fav-group"><div class="gh"><h3>Confianza media</h3><span class="count">' + media.length + '</span></div><div class="fav-list">' + media.map(f => favCard(f, true)).join('') + '</div></div>' : '');
