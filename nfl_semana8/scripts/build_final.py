@@ -5,8 +5,8 @@ import json, math
 from collections import defaultdict
 from status_w8 import OUT, QUESTIONABLE, FUENTES, TEAM_NAME, OL_OUT_NOW, PENDING_TEAMS
 O = '/home/user/data/'; E = '/home/user/entrega_semana8/'
-RAW = json.load(open(O + 'props2_raw.json')); P2 = json.load(open(O + 'model6_params.json'))
-V2 = json.load(open(O + 'props_data_v2.json'))
+RAW = json.load(open(O + 'props2_raw.json')); P2 = json.load(open(O + 'model7_params.json'))
+V2 = json.load(open(O + 'props_data_v6.json'))
 OLD = json.load(open(O + 'props_data_v1.json'))
 players = RAW['players']
 byp = {p['player_id']: p for p in players}

@@ -1380,7 +1380,7 @@ footer { background: transparent; }
         fxBox('Forma reciente', s.f_forma, 'Cuenta sus ' + s.registro.length + ' juegos, con más peso a los recientes.') +
         fxBox('Rival (ajustado por ambos lados)', s.f_rival, 'El rival permite ' + sgn(s.rival_indice) + '; sus rivales previos permitían ' + sgn(s.calendario_indice) + '.') +
         fxBox('Línea ofensiva', s.f_linea, (fx.ol_nota || 'Titulares completos') + '. Solo afecta lo terrestre.') +
-        fxBox('Compañeros', s.f_companeros, aus.length ? 'Fuera: ' + aus.join(', ') + '.' : 'Sin cambios relevantes de compañeros.') +
+        fxBox('Compañeros', s.f_companeros, aus.length ? 'Fuera: ' + aus.join(', ') + '.' + (Math.round((s.f_companeros - 1) * 100) === 0 && ausK === 'targets' ? ' Los targets que dejan libres no se ajustan: en la prueba no mejoraron la predicción.' : '') : 'Sin cambios relevantes de compañeros.') +
         fxBox('Ajuste total', s.factor_total, 'Sobre su promedio de ' + fmt(s.media_temporada) + '.', 'total') +
       '</div></div>' +
       (j.ranking && j.ranking.length ? '<div class="card"><span class="eyebrow">Lo que más le gusta al modelo (probabilidad de superar su promedio)</span><div class="rank">' +

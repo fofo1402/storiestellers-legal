@@ -1,5 +1,8 @@
 # Recheck final · NFL 2026 Semana 8
 
+**Versión vigente (04:05, sáb 31-oct UTC):** diseño de Claude Design (app/design_src.html → app/build_design.py) con el modelo de forma reciente recalibrado sobre 11,543 predicciones (incluye yardas recibidas de RB). Error 0.2013 (todos los juegos igual: 0.2019; sin ajustes: 0.2048); acierta el lado 68.4% (74.4% con prob. ≥60% o ≤40%). Los targets de compañeros ausentes ya no se ajustan (no mejoraron la predicción). Parámetros: scripts/model7_params.json. Favoritos: 18; Alta: Kyler Murray, Jacoby Brissett, Chris Godwin Jr., Hunter Henry.
+
+
 **Actualización:** el modelo final usa TODOS los juegos de 2026 por igual (sin ponderar los recientes) y los RB incluyen yardas recibidas. Búsqueda repetida (30,000 combinaciones + validación por semana) sobre 11,543 predicciones: error 0.2019 vs 0.2048 sin ajustes; acierta el lado 68.2% (74.2% con prob. ≥60% o ≤40%). Parámetros en scripts/model6_params.json. Kyler Murray juega según el reporte final oficial de los Vikings del 30-oct (solo Jay Ward en duda). Favoritos: 14 (Alta: Kyler Murray, Chris Godwin Jr.).
 
 
