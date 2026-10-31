@@ -1,0 +1,63 @@
+{
+ "w_rush": 0.65,
+ "w_pass": 1.0,
+ "w_td": 0.8,
+ "prior_rho": 0.5,
+ "prior_k": 12,
+ "rec_h": 2,
+ "rec_a": 0.5,
+ "bru": -0.06,
+ "gt": 0.25,
+ "gc": 1.0,
+ "disp_cont": 0.9,
+ "disp_count": 0.9,
+ "cal": {
+  "cont": [
+   0.033402116976307905,
+   0.7041894842519838
+  ],
+  "count": [
+   0.010880149399381707,
+   0.8636337908920526
+  ],
+  "td": [
+   -0.09637590065048776,
+   0.84063717821866
+  ]
+ },
+ "test": {
+  "sin_ajuste": 0.2016,
+  "anterior_v4": 0.1982,
+  "final": 0.1978,
+  "hold_final": 0.19450369238428772,
+  "acierto_lado": 0.692,
+  "acierto_lado_confiado": 0.75
+ },
+ "busqueda": {
+  "combinaciones_etapa1": 40000,
+  "validadas_etapa2": 300,
+  "refinamiento_local": 10
+ },
+ "calib": {
+  "Muy dif\u00edcil": {
+   "n": 1158,
+   "acierto": 0.11744386873920552
+  },
+  "Dif\u00edcil": {
+   "n": 3258,
+   "acierto": 0.30448127685696746
+  },
+  "Parejo": {
+   "n": 2977,
+   "acierto": 0.4964729593550554
+  },
+  "F\u00e1cil": {
+   "n": 1998,
+   "acierto": 0.6951951951951952
+  },
+  "Muy f\u00e1cil": {
+   "n": 1074,
+   "acierto": 0.8798882681564246
+  }
+ }
+}

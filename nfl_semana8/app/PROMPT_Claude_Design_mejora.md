@@ -17,14 +17,16 @@ Te adjunto `index.html`: "La Línea · NFL Semana 8", una app en español que ya
 - Cada columna muestra:
   - "No juegan" (bajas del reporte final).
   - "Línea ofensiva" (titulares que faltan).
-  - **Todos** los jugadores con participación probable (QB, RB, WR, TE). Cada uno con su rol (Titular, Rotación o Rol menor), % de snaps, etiqueta de matchup (Favorable, Intermedio o Difícil) y marcas de estado: ★ ALTA o MEDIA si es favorito, "Duda", "Pendiente" y "Regresa".
+  - **Todos** los jugadores con participación probable (QB, RB, WR, TE). Cada uno con su rol (Titular, Rotación o Rol menor), % de snaps, etiqueta de matchup (Favorable, Intermedio o Difícil), marcas de estado (★ ALTA o MEDIA si es favorito, "Duda", "Pendiente" y "Regresa") y, si tiene participación decente, la línea **"Lo más probable"** (su estadística con mayor probabilidad de superar su promedio).
 - Al final del partido va la sección **"Mis favoritos para sobresalir"**. Cada tarjeta muestra:
-  - el % de superar su propio promedio;
+  - **"Lo que más me convence"**: la estadística elegida y su línea, más "También califican" si hay otras;
+  - el % de superar su propio promedio y sus últimos 3 juegos;
   - la línea y la proyección;
   - las razones (rival ajustado, compañeros, línea ofensiva);
   - el riesgo;
   - un botón para abrir la ficha.
 - Si el partido no tiene favorito, se muestra "Sin favorito claro" y el más cercano. Hay 4 partidos así; es intencional.
+- Debajo puede aparecer **"Descartados por matchup"**: jugadores con buen % que no entran porque su ventaja no viene del rival.
 
 ### 2. Ficha del jugador
 - Encabezado con estado de lesión y si es favorito.
@@ -33,7 +35,8 @@ Te adjunto `index.html`: "La Línea · NFL Semana 8", una app en español que ya
   - RB: yardas por tierra, acarreos, recepciones y TD.
   - WR y TE: yardas recibidas, recepciones y TD.
 - Datos clave: promedio, proyección, lo que permite el rival (ajustado) y el matchup en esa estadística.
-- **Desglose de factores** en 4 cajas: Rival (ajustado por ambos lados), Línea ofensiva, Compañeros y Ajuste total.
+- **Desglose de factores** en 5 cajas: Forma reciente, Rival (ajustado por ambos lados), Línea ofensiva, Compañeros y Ajuste total.
+- **"Lo que más le gusta al modelo"**: lista de sus estadísticas ordenadas por probabilidad de superar su promedio; al tocar una se cambia la pestaña.
 - **"Tu línea"**: se mueve con un deslizador, con − y +, o escribiendo el número, en pasos de 0.5. Arranca en la **línea justa** (la más cercana a 50%) y tiene un botón para volver a ella.
 - **Veredicto**: el % de llegar a la línea o superarla y la etiqueta (Muy fácil, Fácil, Parejo, Difícil o Muy difícil). Debe conservar la frase de calibración ("cuando el modelo dijo X, se cumplió el Y%").
 - Dos gráficas:
@@ -42,12 +45,12 @@ Te adjunto `index.html`: "La Línea · NFL Semana 8", una app en español que ya
 
 ### 3. Pestaña "Mis favoritos"
 - Todos los favoritos, primero los de confianza alta y luego los de confianza media.
-- Una tabla "Cambios frente al análisis anterior" con las 21 selecciones originales.
+- Dos tablas: "Cambios frente a mi lista anterior" y "Las 21 selecciones de la primera corrida".
 - Las fuentes del reporte de lesiones, con enlaces.
 
 ## Reglas que NO puedes romper
 
-- **No toques la matemática.** El primer `<script>` (el objeto `window.Props`: `probLlegar`, `etiquetaDificultad`, `probRaw`) se queda tal cual, carácter por carácter. Está verificado contra Python/SciPy en 2,565 casos.
+- **No toques la matemática.** El primer `<script>` (el objeto `window.Props`: `probLlegar`, `etiquetaDificultad`, `probRaw`) se queda tal cual, carácter por carácter. Está verificado contra Python/SciPy en 2,556 casos.
 - **No toques los datos.** El `<script id="data" type="application/json">` se queda igual: sin redondear, filtrar, reordenar ni inventar nada.
 - **No cambies qué se calcula ni cómo.** El % siempre sale de `Props.probLlegar(stat, linea, metadatos)` y la etiqueta, de `Props.etiquetaDificultad`.
 - **Mantén todos los textos informativos:**
@@ -67,23 +70,24 @@ Abre cada jugador y revisa:
 
 | Jugador | Estadística | Línea | Debe dar |
 |---|---|---|---|
-| Kyler Murray | Yardas de pase | 215.5 (línea justa) | **50% Parejo** |
-| Kyler Murray | Yardas de pase | 250.5 | **33% Difícil** |
-| Bijan Robinson | Yardas por tierra | 100.5 | **58% Parejo** |
-| Dallas Goedert | Yardas recibidas | 45.5 | **54% Parejo** |
-| Dallas Goedert | Recepciones | 4.5 | **53% Parejo** |
-| Rachaad White | Yardas por tierra | 29.5 | **70% Fácil** |
+| Kyler Murray | Yardas de pase | 212.5 (línea justa) | **50% Parejo** |
+| Kyler Murray | Yardas de pase | 250.5 | **31% Difícil** |
+| Jacoby Brissett | Yardas de pase | 228.5 | **61% Fácil** |
+| Chris Godwin Jr. | Recepciones | 3.5 | **65% Fácil** |
+| Hunter Henry | Recepciones | 3.5 | **64% Fácil** |
+| Bijan Robinson | Yardas por tierra | 100.5 | **53% Parejo** |
 
 Revisa también:
 - El encabezado de TEN @ CIN dice "Tennessee Titans (visita) @ Cincinnati Bengals (local)".
-- Hay 15 favoritos: 3 de confianza alta (Kyler Murray, Bijan Robinson y Rachaad White) y 12 de confianza media.
-- ARI @ DAL, CLE @ PIT, LAC @ LA y KC @ DEN muestran "Sin favorito claro".
+- Hay 19 favoritos. Los 6 de confianza alta son Jacoby Brissett, Kyler Murray, Chris Godwin Jr., Bucky Irving, Hunter Henry y Makai Lemon.
+- LV @ NYJ, LAC @ LA, KC @ DEN y CHI @ SEA muestran "Sin favorito claro".
+- En ATL @ TB, Bijan Robinson aparece en "Descartados por matchup".
 
 ## Lo que sí quiero que mejores
 
 - **El partido como protagonista:** que el enfrentamiento visita contra local se lea como un marcador de estadio. Nombres completos grandes, quién es visita y quién es local muy claro, y las dos columnas fáciles de comparar.
 - **Lista de jugadores:** que se escanee rápido por posición. Destaca a los titulares, a los favoritos (★) y las alertas (Duda, Pendiente, Regresa) sin saturar.
-- **"Mis favoritos para sobresalir":** que se sienta como la sección estrella de cada partido. El % grande, las razones en lenguaje claro y el riesgo visible.
+- **"Mis favoritos para sobresalir":** que se sienta como la sección estrella de cada partido. "Lo que más me convence" bien destacado, el % grande, las razones en lenguaje claro y el riesgo visible. "Lo más probable" de cada jugador debe leerse fácil en la lista sin saturarla.
 - **Ficha:** el % y la etiqueta son lo más importante y deben leerse al instante. Al mover la línea, el cambio debe sentirse vivo, con una animación sutil del número que respete `prefers-reduced-motion`. El desglose de factores debe entenderse de un vistazo, en verde si suma y en rojo si resta.
 - **Control de la línea:** la idea es la "línea amarilla de primera y diez" de la TV. Hazlo táctil, con marcas de yardas, y con la proyección y la línea justa marcadas.
 - **Gráficas:** limpias, con etiquetas que no choquen y "llegó" contra "no llegó" muy claro.

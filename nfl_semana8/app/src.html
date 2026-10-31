@@ -243,7 +243,15 @@ footer .wrap { display: grid; gap: 4px; }
 .fcard ul { margin: 0; padding-left: 18px; font-size: 14px; display: grid; gap: 4px; }
 .fcard .risk { font-size: 13px; color: var(--d4); }
 .none { font-size: 14px; color: var(--muted); }
-.factors { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.factors { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+.best { font-size: 12px; color: var(--turf); font-weight: 600; }
+.convence { background: var(--turf-soft); border-radius: 6px; padding: 8px 10px; font-size: 14px; }
+.convence b { font-weight: 700; }
+.rank { display: grid; gap: 4px; }
+.rank button { display: grid; grid-template-columns: 1fr auto auto; gap: 10px; text-align: left; border: 1px solid var(--rule); background: var(--surface); border-radius: 6px; padding: 6px 10px; cursor: pointer; font-size: 14px; }
+.rank button[aria-pressed="true"] { border-color: var(--turf); background: var(--turf-soft); }
+.rank .p { font-weight: 700; }
+.desc { font-size: 13px; color: var(--muted); display: grid; gap: 2px; }
 .fx { background: var(--bg); border-radius: 6px; padding: 8px 10px; }
 .fx .k { font-size: 12px; color: var(--muted); }
 .fx .v { font-family: var(--font-display); font-weight: 800; font-size: 24px; line-height: 1.1; }
@@ -300,8 +308,12 @@ footer .wrap { display: grid; gap: 4px; }
     </div>
     <div id="fav-all"></div>
     <div class="blk">
-      <h3>Cambios frente al análisis anterior</h3>
-      <p class="none">Las 21 selecciones de la primera corrida, revisadas con el modelo nuevo.</p>
+      <h3>Cambios frente a mi lista anterior</h3>
+      <p class="none">Los favoritos de la versión anterior del recheck, revisados con el modelo final (forma reciente, rival más realista y matchup obligatorio).</p>
+      <div class="tbl-wrap"><table class="tbl" id="cambios2"></table></div>
+    </div>
+    <div class="blk">
+      <h3>Las 21 selecciones de la primera corrida</h3>
       <div class="tbl-wrap"><table class="tbl" id="cambios"></table></div>
     </div>
     <div class="blk">
@@ -354,6 +366,7 @@ footer .wrap { display: grid; gap: 4px; }
     if (s.tipo === 'cont') return fmt(l, l % 1 ? 1 : 0) + ' yds o más';
     return Math.max(0, Math.ceil(l - 1e-9)) + ' o más';
   }
+  const viewLine = v => (v.stat === 'pass_yds' || v.stat === 'rush_yds' || v.stat === 'rec_yds') ? fmt(v.linea, v.linea % 1 ? 1 : 0) + '+ yds' : (Math.ceil(v.linea - 1e-9)) + ' o más';
   function statusTag(j) {
     if (j.estado === 'Duda') return '<span class="st Duda">Duda</span>';
     if (j.estado === 'Pendiente') return '<span class="st Pendiente">Pendiente</span>';
@@ -368,8 +381,8 @@ footer .wrap { display: grid; gap: 4px; }
   const T = M.modelo.prueba;
   $('foot').innerHTML = '<div><strong>' + esc(AVISO) + '</strong></div>' +
     '<div>' + esc(M.avisos[2]) + '</div>' +
-    '<div>Modelo probado en las semanas 4 a 8 con solo datos previos a cada juego. Error de predicción en semanas 7-8: ' +
-    fmt(T.sin_ajuste, 4) + ' sin ajustes, ' + fmt(T.anterior, 4) + ' con el modelo anterior y ' + fmt(T.v2, 4) + ' con este (menos es mejor).</div>';
+    '<div>Modelo elegido entre ' + M.modelo.busqueda.combinaciones_etapa1.toLocaleString('es-MX') + ' combinaciones, validando cada semana (4 a 8) solo con las demás. Error de predicción: ' +
+    fmt(T.sin_ajuste, 4) + ' sin ajustes, ' + fmt(T.anterior, 4) + ' con el modelo anterior y ' + fmt(T.v2, 4) + ' con este (menos es mejor). Acertó el lado de la línea ' + Math.round(T.acierto_lado * 100) + '% de las veces (' + Math.round(T.acierto_lado_confiado * 100) + '% cuando su probabilidad era 60% o más, o 40% o menos), en líneas de prueba entre la mitad y 1.5 veces el promedio de cada jugador.</div>';
 
   /* ---------------- partidos ---------------- */
   function renderGames() {
@@ -388,7 +401,8 @@ footer .wrap { display: grid; gap: 4px; }
       '<span class="pos">' + j.pos + '</span>' +
       '<span class="nm">' + esc(j.jugador) + (f ? '<span class="star">★ ' + esc(f.confianza.toUpperCase()) + '</span>' : '') + statusTag(j) +
       '<small><span class="role">' + esc(j.rol) + '</span>' + (j.pos !== 'QB' && !j.regresa ? ' · ' + j.snaps_ult3 + '% snaps' : '') +
-      (j.stats.length ? '' : ' · sin juegos suficientes') + '</small></span>' +
+      (j.stats.length ? '' : ' · sin juegos suficientes') +
+      (j.mejor ? '<br><span class="best">Lo más probable: ' + esc(j.mejor.etiqueta) + ' ' + esc(viewLine(j.mejor)) + ' · ' + pct(j.mejor.prob) + '</span>' : '') + '</small></span>' +
       (j.lectura_general ? '<span class="chip ' + j.lectura_general + '">' + j.lectura_general + '</span>' : '<span></span>') +
       '</button>';
   }
@@ -404,8 +418,10 @@ footer .wrap { display: grid; gap: 4px; }
     return '<div class="fcard ' + f.confianza + '">' +
       '<div class="fcard-top"><b>' + esc(f.jugador) + '</b><span class="conf ' + f.confianza + '">' + f.confianza + '</span>' +
       '<span class="cat">' + f.pos + ' · ' + esc(f.equipo) + (withGame ? ' · ' + esc(byId.get(f.player_id).partido) : '') + '</span></div>' +
+      '<div class="convence">Lo que más me convence: <b>' + esc(f.etiqueta) + ' · ' + esc(viewLine(f)) + '</b>' +
+        (f.tambien && f.tambien.length ? '<br>También califican: ' + f.tambien.map(t => esc(t.etiqueta) + ' ' + esc(viewLine(t)) + ' (' + pct(t.prob) + ')').join(', ') : '') + '</div>' +
       '<div class="big"><span class="n">' + pct(f.prob) + '</span><span class="t">de superar su promedio en ' + esc(f.etiqueta.toLowerCase()) +
-      ' (' + fmt(f.promedio) + '; línea ' + fmt(f.linea, f.linea % 1 ? 1 : 0) + '). Proyección: ' + fmt(f.proyeccion) + ' (' + sgn(f.factor) + ').</span></div>' +
+      ' (promedio ' + fmt(f.promedio) + '; últimos 3: ' + f.ultimos3.map(v => fmt(v, 0)).join(', ') + '). Proyección: ' + fmt(f.proyeccion) + ' (' + sgn(f.factor) + ').</span></div>' +
       '<ul>' + reasons + '</ul>' +
       (f.riesgo ? '<div class="risk">Riesgo: ' + esc(f.riesgo) + '</div>' : '') +
       '<button type="button" class="open" data-open="' + f.player_id + '">Abrir ficha y mover la línea</button>' +
@@ -444,11 +460,12 @@ footer .wrap { display: grid; gap: 4px; }
       '<div class="defs">' + g.defensas.map(t => '<span>' + esc(t) + '</span>').join('') + '</div>' +
       '<div class="roster-head">' + posFilter() + '</div>' +
       '<div class="teams">' + col(g.visitante, 'Visita', g.nombre_visitante) + col(g.local, 'Local', g.nombre_local) + '</div>' +
-      '<div class="favs"><div class="favs-head"><h3>Mis favoritos para sobresalir</h3><span>Que superen su propio promedio de la temporada</span></div>' +
+      '<div class="favs"><div class="favs-head"><h3>Mis favoritos para sobresalir</h3><span>Que superen su propio promedio de la temporada · en cada uno, la estadística que más me convence</span></div>' +
         (favs.length ? '<div class="fav-list">' + favs.map(f => favCard(f, false)).join('') + '</div>'
-          : '<p class="none">Sin favorito claro en este partido: nadie combina buen ajuste (+4% o más) con 50% o más de superar su promedio.' +
+          : '<p class="none">Sin favorito claro en este partido: nadie combina matchup no difícil, ajuste de +4% o más y 55% o más de superar su promedio.' +
             (g.mas_cercano ? ' El más cercano: <button type="button" class="linklike" data-pid="' + g.mas_cercano.player_id + '">' + esc(g.mas_cercano.jugador) + '</button> (' +
-              pct(g.mas_cercano.prob) + ' en ' + esc(g.mas_cercano.etiqueta.toLowerCase()) + ', ajuste ' + sgn(g.mas_cercano.factor) + ').' : '') + '</p>') +
+              pct(g.mas_cercano.prob) + ' en ' + esc(g.mas_cercano.etiqueta.toLowerCase()) + ' ' + esc(viewLine(g.mas_cercano)) + ', ajuste ' + sgn(g.mas_cercano.factor) + ').' : '') + '</p>') +
+        (g.descartados.length ? '<div class="desc"><b>Descartados por matchup:</b>' + g.descartados.map(x => '<span>' + esc(x.jugador) + ' — ' + esc(x.motivo) + ' (' + pct(x.prob) + ').</span>').join('') + '</div>' : '') +
       '</div>';
   }
 
@@ -489,17 +506,20 @@ footer .wrap { display: grid; gap: 4px; }
     const aus = fx.ausentes.filter(a => a[ausK] >= (ausK === 'acarreos' ? 0.15 : 0.08)).map(a => a.jugador + (a.peso < 1 ? ' (duda)' : ''));
     body.innerHTML =
       '<div class="facts">' +
-        fact('Promedio temporada', fmt(s.media_temporada), unit(s)) +
+        fact('Promedio temporada', fmt(s.media_temporada), unit(s) + ' · últimos 3: ' + s.ultimos3.map(v => fmt(v, 0)).join(', ')) +
         fact('Proyección vs ' + j.rival, fmt(s.proyeccion), sgn(s.factor_total) + ' total') +
         fact(j.rival + ' permite (ajustado)', sgn(s.rival_indice), '#' + s.rival_rank + ' de 32 · ' + fmt(s.rival_permite_pj) + ' por juego sin ajustar') +
         '<div class="fact"><div class="k">Matchup en esta estadística</div><div class="v"><span class="chip ' + s.lectura + '">' + s.lectura + '</span></div></div>' +
       '</div>' +
       '<div class="factors">' +
+        fxBox('Forma reciente', s.f_forma, 'Últimos 3: ' + s.ultimos3.map(v => fmt(v, 0)).join(', ') + ' (prom. ' + fmt(s.prom_ult3) + ').') +
         fxBox('Rival (ajustado por ambos lados)', s.f_rival, 'El rival permite ' + sgn(s.rival_indice) + '; sus rivales previos permitían ' + sgn(s.calendario_indice) + '.') +
         fxBox('Línea ofensiva', s.f_linea, (fx.ol_nota || 'Titulares completos') + '. Solo afecta lo terrestre.') +
         fxBox('Compañeros', s.f_companeros, aus.length ? 'Fuera: ' + aus.join(', ') + '.' : 'Sin cambios relevantes de compañeros.') +
         fxBox('Ajuste total', s.factor_total, 'Sobre su promedio de ' + fmt(s.media_temporada) + '.', 'total') +
       '</div>' +
+      (j.ranking && j.ranking.length ? '<div class="rank"><div class="k" style="font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em">Lo que más le gusta al modelo (probabilidad de superar su promedio)</div>' +
+        j.ranking.map(v => '<button type="button" data-stat="' + v.stat + '" aria-pressed="' + (v.stat === s.key) + '"><span>' + esc(v.etiqueta) + ' · ' + esc(viewLine(v)) + '</span><span class="p">' + pct(v.prob) + '</span><span class="chip ' + v.lectura + '">' + v.lectura + '</span></button>').join('') + '</div>' : '') +
       '<div class="ctl">' +
         '<div class="ctl-row">' +
           '<label for="ln-num">Tu línea</label>' +
@@ -518,7 +538,7 @@ footer .wrap { display: grid; gap: 4px; }
         '<div class="chart"><h3>Juego por juego contra tu línea</h3><p id="log-cap"></p><div id="log"></div></div>' +
       '</div>' +
       '<div class="note">' +
-        '<span>Cómo se calcula: su promedio × ajuste del rival × línea ofensiva × compañeros. El rival se mide por ambos lados: lo que permite su defensa ajustado por las ofensivas que enfrentó, contra lo que permitían las defensas que este jugador ya enfrentó.</span>' +
+        '<span>Cómo se calcula: su promedio × forma reciente × ajuste del rival × línea ofensiva × compañeros. El rival se mide por ambos lados: lo que permite su defensa ajustado por las ofensivas que enfrentó (con la temporada 2025 como referencia ligera), contra lo que permitían las defensas que este jugador ya enfrentó. Todas las cifras del jugador son de 2026 y cuentan todos sus juegos.</span>' +
         (s.tipo === 'td' ? '<span>TD: una línea de 0.5 significa 1 o más.</span>' : s.tipo === 'count' ? '<span>En conteos, una línea con .5 se redondea hacia arriba: 5.5 significa 6 o más.</span>' : '') +
       '</div>';
     updateLine(j, s, l);
@@ -628,12 +648,14 @@ footer .wrap { display: grid; gap: 4px; }
     const alta = all.filter(f => f.confianza === 'Alta'), media = all.filter(f => f.confianza !== 'Alta');
     const sinFav = D.partidos.filter(g => !g.favoritos.length).map(g => g.partido);
     $('fav-sub').textContent = all.length + ' favoritos en ' + (D.partidos.length - sinFav.length) + ' de ' + D.partidos.length + ' partidos (' + alta.length +
-      ' de confianza alta). Regla: ajuste total de +4% o más y 50% o más de superar su propio promedio. Sin favorito claro: ' + (sinFav.join(', ') || 'ninguno') + '.';
+      ' de confianza alta). Regla: en la estadística elegida, matchup no difícil, el rival no resta, ajuste total de +4% o más y 55% o más de superar su propio promedio (Alta: 60% o más, matchup favorable, sano y sin mala racha). Sin favorito claro: ' + (sinFav.join(', ') || 'ninguno') + '.';
     $('fav-all').innerHTML =
       '<div class="favs-head"><h3>Confianza alta</h3></div><div class="fav-list">' + alta.map(f => favCard(f, true)).join('') + '</div>' +
       '<div class="favs-head" style="margin-top:18px"><h3>Confianza media</h3></div><div class="fav-list">' + media.map(f => favCard(f, true)).join('') + '</div>';
     $('cambios').innerHTML = '<thead><tr><th>Jugador</th><th>Antes</th><th>Ahora</th><th>Por qué</th></tr></thead><tbody>' +
       D.cambios.map(c => '<tr><td>' + esc(c.jugador) + '</td><td>' + esc(c.antes) + '</td><td>' + esc(c.ahora) + '</td><td>' + esc(c.motivo) + '</td></tr>').join('') + '</tbody>';
+    $('cambios2').innerHTML = '<thead><tr><th>Jugador</th><th>Antes</th><th>Ahora</th><th>Por qué</th></tr></thead><tbody>' +
+      D.cambios_v2.map(c => '<tr><td>' + esc(c.jugador) + '</td><td>' + esc(c.antes) + '</td><td>' + esc(c.ahora) + '</td><td>' + esc(c.motivo) + '</td></tr>').join('') + '</tbody>';
     $('fuentes').innerHTML = M.fuentes_lesiones.map(f => '<span>' + esc(f.nombre) + ': <a href="' + esc(f.url) + '">' + esc(f.url.replace(/^https?:\/\//, '').slice(0, 70)) + '</a></span>').join('');
   }
 

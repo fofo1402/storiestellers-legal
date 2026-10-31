@@ -3,11 +3,15 @@
 import sys; sys.path.insert(0, '/home/user/scripts')
 import pandas as pd, numpy as np, json, math
 from props_model import pw, res, STATS, player_games, Ctx, params, cv_priors, dist_params, prob_ge, norm
-from model2 import Ratings, team_shares, vacated, ol_out_cached, _sc
+from model2 import Ratings, RatingsP, team_shares, vacated, ol_out_cached, _sc
+import pickle
 from status_w8 import *
 D = '/home/user/raw/nflverse/'; O = '/home/user/data/'
-P2 = json.load(open(O + 'model2_params.json'))
-W, BRU, GT, GC, CAL = P2['w'], P2['bru'], P2['gt'], P2['gc'], P2['cal']
+P2 = json.load(open(O + 'model5_params.json'))
+BRU, GT, GC, CAL = P2['bru'], P2['gt'], P2['gc'], P2['cal']
+RH, RA = P2['rec_h'], P2['rec_a']; VH, VA = 4, 0.5   # VH/VA: ponderación de la historia de compañeros (igual que en la prueba)
+WG = {'rush': P2['w_rush'], 'pass': P2['w_pass'], 'td': P2['w_td']}
+DISP = {'cont': P2['disp_cont'], 'count': P2['disp_count']}
 REC = {'receptions', 'receiving_yards'}; RUSH = {'carries', 'rushing_yards'}
 OLG = {'rushing_yards': 1.0, 'carries': 1.0, 'td_any': 0.5}
 sig = lambda z: 1 / (1 + math.exp(-z))
@@ -18,7 +22,8 @@ def pcal(dp, kind, L):
     if p <= 0: return 0.0
     a, b = CAL[kind]; return sig(a + b * lgt(p))
 
-R = Ratings(99); ctx = Ctx(99); RK = ctx.rank_table()
+PRI = pickle.load(open(O + 'prior2025.pkl', 'rb'))
+R = RatingsP(99, PRI, rho=P2['prior_rho'], kp=P2['prior_k']); ctx = Ctx(99); RK = ctx.rank_table()
 sch = pd.read_csv(O + 'schedule_w8.csv')
 J0 = json.load(open('/home/user/entrega_semana8/data.json'))
 P0 = {p['partido']: p for p in J0['partidos']}
@@ -140,28 +145,37 @@ for x in POOL.itertuples():
     olh = float(np.mean([ol_out_cached(TEAM_OF_GAME[(gg['game_id'], gg['opp'])], gg['game_id'], 99) for gg in g]))
     sh = SH[x.team]
     vt_now, vc_now = vacated_w(x.team, x.pid, sh, ABSENT[x.team])
-    hist = [vacated(x.team, gg['game_id'], x.pid, sh) for gg in g if TEAM_OF_GAME[(gg['game_id'], gg['opp'])] == x.team]
-    dvt = vt_now - (np.mean([h[0] for h in hist]) if hist else 0); dvc = vc_now - (np.mean([h[1] for h in hist]) if hist else 0)
+    prior_g = pw[(pw.player_id == x.pid) & (pw.team == x.team)].sort_values('week')
+    hv = np.array([vacated(x.team, gid, x.pid, sh) for gid in prior_g.game_id]) if len(prior_g) else np.zeros((0, 2))
+    if len(hv):
+        nh = len(hv); wh = 0.5 ** ((nh - 1 - np.arange(nh)) / VH); wh = (1 - VA) / nh + VA * wh / wh.sum()
+        ht, hc = (wh[:, None] * hv).sum(0)
+    else: ht = hc = 0.0
+    dvt = vt_now - ht; dvc = vc_now - hc
     stats_ = []
     for key, c, label, kind in STATS[x.pos]:
         d = P[key]; mu0 = d['mu']
+        xs = np.array([gg['vals'][c] for gg in g]); n_ = len(xs); mraw = float(xs.mean())
+        wts = 0.5 ** ((n_ - 1 - np.arange(n_)) / RH); ew = float((wts * xs).sum() / wts.sum())
+        ffo = ((1 - RA) + RA * ew / mraw) if mraw > 0 else 1.0
         dr = R.d(x.pos, c, rival); dfc = float(np.mean([R.d(x.pos, c, gg['opp']) for gg in g]))
-        fr = (dr / dfc) ** W if dr > 0 and dfc > 0 else 1.0
+        gk = 'td' if kind == 'td' else ('rush' if c in RUSH else 'pass')
+        fr = (dr / dfc) ** WG[gk] if dr > 0 and dfc > 0 else 1.0
         fo = max(0.5, 1 + BRU * OLG.get(c, 0) * (olnow - olh))
         fv = 1.0
         if x.pos != 'QB':
             if c in REC or c == 'td_any': fv *= min(1.5, max(0.7, 1 / (1 - dvt))) ** GT
             if c in RUSH or (c == 'td_any' and x.pos == 'RB'): fv *= min(1.5, max(0.7, 1 / (1 - min(dvc, 0.6)))) ** GC
-        f = fr * fo * fv; mu = mu0 * f
-        dd = dict(kind='td', mu=mu) if kind == 'td' else dict(kind=kind, mu=mu, sd=d['sd'] * f)
+        f = ffo * fr * fo * fv; mu = mu0 * f
+        dd = dict(kind='td', mu=mu) if kind == 'td' else dict(kind=kind, mu=mu, sd=(d['sd'] / mu0 * mu * DISP[kind] if mu0 > 0 else 0.0))
         dp = dist_params(dd)
         if dp.get('dist') == 'poisson' and dp['lam'] <= 0: dp = dict(dist='zero')
         rk = int(R.rank_def(x.pos, c)[rival]); lect = 'Favorable' if rk <= 10 else ('Intermedio' if rk <= 21 else 'Difícil')
         fl = fair_line(dp, kind, mu)
-        avg_line = (math.floor(d['mean_raw']) + 0.5) if kind == 'cont' else (max(1, math.ceil(d['mean_raw'] + 1e-9)) - 0.5 if kind == 'count' else 0.5)
-        stats_.append(dict(key=key, etiqueta=label, tipo=kind, media_temporada=d['mean_raw'], proyeccion=mu, de=(d['sd'] * f if kind != 'td' else None),
+        avg_line = (math.floor(d['mean_raw']) + 0.5) if kind == 'cont' else max(0.5, math.ceil(d['mean_raw'] - 1e-9) - 0.5)
+        stats_.append(dict(key=key, etiqueta=label, tipo=kind, media_temporada=d['mean_raw'], proyeccion=mu, de=(d['sd'] / mu0 * mu * DISP[kind] if kind != 'td' and mu0 > 0 else None),
             rival_permite_pj=float(RK[x.pos + '_pg'][c][rival]), rival_indice=dr, rival_rank=rk, lectura=lect, calendario_indice=dfc,
-            f_rival=fr, f_linea=fo, f_companeros=fv, factor_total=f, dist=dp, linea_sugerida=fl,
+            f_forma=ffo, ultimos3=[float(v) for v in xs[-3:]], prom_ult3=float(xs[-3:].mean()), f_rival=fr, f_linea=fo, f_companeros=fv, factor_total=f, dist=dp, linea_sugerida=fl,
             prob_superar_promedio=pcal(dp, kind, avg_line), linea_promedio=avg_line,
             registro=[dict(sem=gg['week'], rival=gg['opp'], cond='L' if gg['ha'] == 'vs' else 'V', valor=gg['vals'][c]) for gg in g]))
         for L in sorted({fl, avg_line, round(mu * 0.6, 1), round(mu * 1.4, 1)} if kind != 'td' else {0.5, 1.5}):

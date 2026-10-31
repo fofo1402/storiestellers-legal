@@ -106,3 +106,55 @@ def vacated(team, game_id, pid, shares, absent=None):
         if st_ >= 0.08: vt += st_
         if sc_ >= 0.15 and pg in ('RB', 'QB'): vc += sc_
     return vt, vc
+
+# ---------------- temporada anterior como base (prior) ----------------
+def ratings_2025():
+    s = pd.read_csv('/home/user/raw/nflverse/stats_player_week_2025.csv', low_memory=False)
+    s = s[(s.season_type == 'REG') & s.position.isin(['QB', 'RB', 'FB', 'WR', 'TE'])].copy()
+    s['pgrp'] = s.position.replace({'FB': 'RB'})
+    for c in ['rushing_tds', 'receiving_tds', 'passing_tds', 'completions', 'attempts', 'carries', 'targets', 'receptions', 'rushing_yards', 'receiving_yards', 'passing_yards']:
+        s[c] = s[c].fillna(0)
+    s['td_any'] = s.rushing_tds + s.receiving_tds
+    g = pd.read_csv('/home/user/raw/nflverse/games.csv', low_memory=False); g = g[(g.season == 2025) & (g.game_type == 'REG') & g.home_score.notna()]
+    rows = []
+    for r in g.itertuples():
+        rows.append(dict(team=r.home_team, opp=r.away_team, game_id=r.game_id, week=r.week)); rows.append(dict(team=r.away_team, opp=r.home_team, game_id=r.game_id, week=r.week))
+    tg = pd.DataFrame(rows)
+    og = s.groupby(['team', 'game_id', 'pgrp'])[COLS].sum().reset_index()
+    out = {}
+    for p in STATS:
+        x = tg.merge(og[og.pgrp == p].drop(columns='pgrp'), on=['team', 'game_id'], how='left').fillna(0)
+        for c in COLS:
+            y = x[c].values; L = y.mean()
+            A = {t: 1.0 for t in set(x.team)}; Dd = dict(A)
+            if L > 0:
+                df = pd.DataFrame({'y': y, 'o': x.team.values, 'd': x.opp.values}); k = K_RAT[KIND[c]]
+                for _ in range(60):
+                    df['ea'] = L * df.d.map(Dd); sa = df.groupby('o').agg(y=('y', 'sum'), e=('ea', 'sum')); A = ((sa.y + k * L) / (sa.e + k * L)).to_dict()
+                    df['ed'] = L * df.o.map(A); sd = df.groupby('d').agg(y=('y', 'sum'), e=('ed', 'sum')); Dd = ((sd.y + k * L) / (sd.e + k * L)).to_dict()
+                    m = np.mean(list(Dd.values())); Dd = {t: v / m for t, v in Dd.items()}
+            out[(p, c)] = (A, Dd)
+    return out
+
+class RatingsP(Ratings):
+    """Como Ratings, pero encoge hacia la calificación 2025 (regresada a la media con rho) en vez de hacia 1."""
+    def __init__(self, maxweek=99, prior=None, rho=0.4, kp=4.0, iters=60):
+        self.A = {}; self.D = {}; self.L = {}
+        for p in STATS:
+            x = OG[p][OG[p].week < maxweek]
+            for c in COLS:
+                y = x[c].values; o = x.team.values; d = x.opp.values
+                L = y.mean() if len(y) else 0.0
+                teams = sorted(set(o) | set(d))
+                pa, pd_ = prior[(p, c)]
+                PA = {t: 1 + rho * (pa.get(t, 1.0) - 1) for t in teams}; PD = {t: 1 + rho * (pd_.get(t, 1.0) - 1) for t in teams}
+                A = dict(PA); Dd = dict(PD); k = kp
+                if L > 0:
+                    df = pd.DataFrame({'y': y, 'o': o, 'd': d})
+                    for _ in range(iters):
+                        df['ea'] = L * df.d.map(Dd); sa = df.groupby('o').agg(y=('y', 'sum'), e=('ea', 'sum'))
+                        A = {t: (sa.y.get(t, 0) + k * L * PA[t]) / (sa.e.get(t, 0) + k * L) for t in teams}
+                        df['ed'] = L * df.o.map(A); sd = df.groupby('d').agg(y=('y', 'sum'), e=('ed', 'sum'))
+                        Dd = {t: (sd.y.get(t, 0) + k * L * PD[t]) / (sd.e.get(t, 0) + k * L) for t in teams}
+                        m = np.mean(list(Dd.values())); Dd = {t: v / m for t, v in Dd.items()}
+                self.A[(p, c)] = A; self.D[(p, c)] = Dd; self.L[(p, c)] = L
