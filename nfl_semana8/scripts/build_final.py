@@ -269,7 +269,60 @@ ok = sorted([x for x in cands if x['cumple']], key=lambda x: -x['prob'])
 mejor = max(cands, key=lambda x: x['prob']) if cands else None
 eleccion = dict(cumplen=ok, ninguno=(len(ok) == 0), me_quedaria=(None if ok else mejor),
                 regla='Cumple la expectativa si el parlay de 2 tiene 40% o más (o el de 3, 27% o más) según el modelo.')
-parlay_info = dict(por_partido=parlays, generales=gen, eleccion=eleccion,
+# ---------- Más opciones: riesgo moderado (piernas sólidas de partidos distintos) ----------
+from itertools import combinations as _comb
+pool_all = []
+for g in partidos: pool_all += legs_of(g['partido'])
+pool_all = sorted(pool_all, key=lambda l: -l['prob'])[:40]
+BANDA = {2: (0.30, 0.40), 3: (0.20, 0.27)}
+cands_m = []
+for n in (2, 3):
+    for combo in _comb(pool_all, n):
+        if len({l['partido'] for l in combo}) < n: continue
+        pr = 1.0
+        for l in combo: pr *= l['prob']
+        lo, hi = BANDA[n]
+        if lo <= pr < hi:
+            ntd = sum(1 for l in combo if l['stat'] in ('td', 'pass_td'))
+            cands_m.append((pr, n, ntd, combo))
+cands_m.sort(key=lambda x: -x[0])
+uso = {}; moderados = []
+def pick(filtro, n, k):
+    got = 0
+    for pr, nn, ntd, combo in cands_m:
+        if got >= k: break
+        if nn != n or not filtro(ntd, nn): continue
+        keys = [(l['player_id'], l['stat']) for l in combo]
+        if any(uso.get(l['player_id'], 0) >= 2 for l in combo): continue
+        if any(set(keys) == set((l['player_id'], l['stat']) for l in m['piernas']) for m in moderados): continue
+        for l in combo: uso[l['player_id']] = uso.get(l['player_id'], 0) + 1
+        tipo = ('Sin TD' if ntd == 0 else ('Mixto' if ntd < nn else 'Solo TD'))
+        moderados.append(dict(tipo=f'Moderado de {nn}', etiqueta=f'Riesgo moderado · {tipo}', partido='Varios partidos', piernas=list(combo), prob=pr, cuota_justa=1 / pr, cumple=False, moderado=True))
+        got += 1
+pick(lambda ntd, n: ntd == 0, 2, 3)          # 2 piernas sin TD
+pick(lambda ntd, n: 0 < ntd < n, 2, 2)       # 2 piernas mixto
+pick(lambda ntd, n: ntd == 0, 3, 2)          # 3 piernas sin TD
+pick(lambda ntd, n: ntd <= 1, 3, 2)          # 3 piernas con a lo más un TD
+moderados.sort(key=lambda m: (len(m['piernas']), -m['prob']))
+# ---------- Parlays largos (4 a 6 piernas): la mejor pierna de cada partido, partidos distintos ----------
+def best_per_game(no_td=False):
+    bg = {}
+    for l in pool_all if not no_td else [x for g in partidos for x in legs_of(g['partido'])]:
+        if no_td and l['stat'] in ('td', 'pass_td'): continue
+        if l['partido'] not in bg or l['prob'] > bg[l['partido']]['prob']: bg[l['partido']] = l
+    return sorted(bg.values(), key=lambda l: -l['prob'])
+largos = []
+for no_td in (False, True):
+    bests = best_per_game(no_td)
+    for n in (4, 5, 6):
+        if len(bests) < n: continue
+        legs = bests[:n]; pr = 1.0
+        for l in legs: pr *= l['prob']
+        largos.append(dict(tipo=f'Largo de {n}', etiqueta=f"{n} piernas · {'sin TD' if no_td else 'la más probable'}", partido='Varios partidos', piernas=legs, prob=pr,
+                           cuota_justa=1 / pr, cumple=False, moderado=True, largo=True))
+parlay_info = dict(por_partido=parlays, generales=gen, eleccion=eleccion, moderados=moderados, largos=largos,
+                   regla_largo='Con más piernas el pago sube, pero la probabilidad cae rápido: aun con piernas de 60% a 70%, un parlay de 5 se cumple pocas veces.',
+                   regla_moderado='Riesgo moderado: 2 piernas entre 30% y 40%, o 3 piernas entre 20% y 27% de que se cumplan todas. Piernas de partidos distintos, sanas, con 4+ juegos y matchup no difícil.',
                    nota='Un parlay no es seguro: todas las piernas tienen que cumplirse. La probabilidad conjunta asume que las piernas son independientes; dentro de un mismo partido puede variar. La cuota justa es 1 / probabilidad: si la casa paga menos que eso, el modelo no le ve valor.')
 out = dict(metadatos=meta, partidos=partidos, jugadores=players, cambios=cambios, cambios_v2=cambios_v2, top5=top5, parlays=parlay_info)
 json.dump(out, open(E + 'props_data.json', 'w'), ensure_ascii=False, separators=(',', ':'))

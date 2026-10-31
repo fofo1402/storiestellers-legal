@@ -678,6 +678,8 @@ nav.tabs a:not([aria-current="page"]) > span[aria-hidden] { color: inherit; }
 .parlay-h b { font-family: var(--font-cond); font-weight: 800; font-size: 16px; letter-spacing: .05em; text-transform: uppercase; }
 .parlay-h .st { font-size: 12px; font-weight: 700; border-radius: 4px; padding: 1px 7px; }
 .parlay.ok .parlay-h .st { background: var(--turf); color: var(--turf-ink); }
+.parlay.mod { border: 2px solid color-mix(in srgb, var(--line) 70%, var(--rule)); }
+.parlay.mod .parlay-h .st { background: color-mix(in srgb, var(--line) 30%, var(--surface)); color: var(--ink); border: 0; }
 .parlay:not(.ok) .parlay-h .st { border: 1.5px solid var(--rule-strong); color: var(--muted); }
 .legs { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
 .legs li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; font-size: 14px; align-items: baseline; }
@@ -1628,7 +1630,7 @@ footer { background: transparent; }
     if (!x) return '';
     if (!x.piernas || !x.piernas.length) return '<div class="parlay"><div class="parlay-h"><b>' + (withGame ? 'Parlay · ' + esc(x.partido) : 'Parlay del partido') + '</b><span class="st">Sin parlay</span></div><p class="none" style="margin:0;font-size:14px">No hay dos piernas compatibles que el modelo vea con 50% o más (sin juntar piernas que se estorban).</p></div>';
     const title = x.tipo === 'Por partido' ? (withGame ? 'Parlay · ' + esc(x.partido) : 'Parlay del partido') : esc(x.tipo) + ' piernas';
-    return '<div class="parlay' + (x.cumple ? ' ok' : '') + '"><div class="parlay-h"><b>' + title + '</b><span class="st">' + (x.cumple ? 'Cumple la expectativa' : (x.flexible ? 'No cumple (piernas más débiles)' : 'No cumple la expectativa')) + '</span></div>' +
+    return '<div class="parlay' + (x.cumple ? ' ok' : '') + (x.moderado ? ' mod' : '') + '"><div class="parlay-h"><b>' + title + '</b><span class="st">' + (x.etiqueta ? esc(x.etiqueta) : (x.cumple ? 'Cumple la expectativa' : (x.flexible ? 'No cumple (piernas más débiles)' : 'No cumple la expectativa'))) + '</span></div>' +
       '<ol class="legs">' + x.piernas.map(l => '<li><span><b>' + esc(l.jugador) + '</b> · ' + esc(l.etiqueta) + ' ' + esc(viewLine(l)) + '<br><small>' + l.pos + ' ' + esc(l.equipo) + (x.tipo !== 'Por partido' ? ' · ' + esc(l.partido) : '') + ' · matchup ' + esc(l.lectura.toLowerCase()) + ' (#' + l.rival_rank + ')' + (l.nota ? ' · ' + esc(l.nota) : '') + '</small></span><span class="p">' + pct(l.prob) + '</span></li>').join('') + '</ol>' +
       '<div class="parlay-f"><span>Probabilidad de que se cumplan todas: <b>' + pct(x.prob) + '</b></span><span>Cuota justa del modelo: <b>' + fmt(x.cuota_justa, 2) + '</b></span></div></div>';
   }
@@ -1654,6 +1656,10 @@ footer { background: transparent; }
         (E.ninguno ? '<p><b>Ninguno cumple la expectativa.</b> Si tuviera que elegir uno, me quedaría con el más probable:</p>' + parlayCard(E.me_quedaria, true)
           : '<p>' + (E.cumplen.length === 1 ? 'Solo uno cumple la expectativa:' : 'Cumplen la expectativa ' + E.cumplen.length + ', del más probable al menos probable:') + '</p><div class="grid">' + E.cumplen.map(x => parlayCard(x, true)).join('') + '</div>') +
       '</div>' +
+      (PL.moderados && PL.moderados.length ? '<div class="frank-h" style="border:0;padding:6px 0 0"><h3 style="font-size:20px">Más opciones · riesgo moderado</h3><span class="hint">' + esc(PL.regla_moderado) + '</span></div>' +
+        '<div class="grid">' + PL.moderados.map(x => parlayCard(x, true)).join('') + '</div>' : '') +
+      (PL.largos && PL.largos.length ? '<div class="frank-h" style="border:0;padding:6px 0 0"><h3 style="font-size:20px">Parlays largos · 4 a 6 piernas</h3><span class="hint">' + esc(PL.regla_largo) + '</span></div>' +
+        '<div class="grid">' + PL.largos.map(x => parlayCard(x, true)).join('') + '</div>' : '') +
       '<div class="frank-h" style="border:0;padding:6px 0 0"><h3 style="font-size:20px">Uno por partido</h3><span class="hint">' + esc(PL.nota) + '</span></div>' +
       '<div class="grid">' + PL.por_partido.map(x => parlayCard(x, true)).join('') + '</div></section>' : '';
     $('fav-all').innerHTML = top5html + parlayhtml +
