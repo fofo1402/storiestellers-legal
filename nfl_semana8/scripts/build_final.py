@@ -220,6 +220,16 @@ top5 = dict(picks=[dict(rank=i + 1, rol=('Alta' if c['confianza'] == 'Alta' else
 from itertools import combinations as _comb
 import math as _m
 TDK = {'td', 'pass_td'}
+import pandas as _pd0
+from scipy.stats import norm as _n0
+_g0 = _pd0.read_csv('/home/user/raw/nflverse/games.csv', low_memory=False); _g0 = _g0[(_g0.season == 2026) & (_g0.game_type == 'REG')]
+_p0 = _g0[_g0.home_score.notna() & _g0.spread_line.notna()]
+_SDM = float(((_p0.home_score - _p0.away_score) - _p0.spread_line).std())
+WINP = {}
+for g in partidos:
+    r = _g0[(_g0.week == 8) & (_g0.away_team == g['visitante']) & (_g0.home_team == g['local'])].iloc[0]
+    WINP[g['partido']] = {g['local']: float(_n0.cdf(r.spread_line / _SDM)), g['visitante']: float(1 - _n0.cdf(r.spread_line / _SDM))}
+MIN_ML = 0.55
 MINP = {'QB': 0.55, 'RB': 0.53, 'WR': 0.53, 'TE': 0.53}
 def legs_of(game, flexible=False):
     out = []
@@ -234,8 +244,14 @@ def legs_of(game, flexible=False):
             out.append(dict(player_id=pl['player_id'], jugador=pl['jugador'], pos=pl['pos'], equipo=pl['equipo'], partido=pl['partido'], stat=s['key'], etiqueta=s['etiqueta'],
                             linea=s['linea_promedio'], prob=s['prob_superar_promedio'], lectura=s['lectura'], rival_rank=s['rival_rank'],
                             nota=('' if (pl['estado'] == 'OK' and pl['pj'] >= 4) else (pl['estado_lesion'] if pl['estado'] != 'OK' else 'muestra corta'))))
+    if game:
+        for t, pw_ in WINP[game].items():
+            if pw_ >= (0.50 if flexible else MIN_ML):
+                out.append(dict(player_id='ML|' + t, jugador=TEAM_NAME[t] + ' gana', pos='EQ', equipo=t, partido=game, stat='gana', etiqueta='Gana el partido',
+                                linea=None, prob=pw_, lectura='Mercado', rival_rank='—', kind='ml', nota=''))
     return out
 def compatible(a, b):
+    if a.get('kind') == 'ml' and b.get('kind') == 'ml' and a['partido'] == b['partido']: return False
     if a['player_id'] == b['player_id']: return False
     if a['equipo'] == b['equipo'] and a['pos'] == 'RB' and b['pos'] == 'RB': return False
     if a['equipo'] == b['equipo'] and 'QB' in (a['pos'], b['pos']) and a['pos'] != b['pos']: return False
@@ -279,12 +295,26 @@ def mk(tipo, piernas, etiqueta=None, **kw):
 UMBRAL = {2: 0.40, 3: 0.27}
 parlays = []
 for g in partidos:
-    strict = legs_of(g['partido']); b = best_combo(strict, 2); flex = False; note = None
-    if not b: b = best_combo(legs_of(g['partido'], True), 2); flex = True
-    if b: x = mk('Por partido', b[1], note, partido=g['partido'], cumple=(b[0] >= UMBRAL[2] and not flex), flexible=flex)
-    else: x = dict(tipo='Por partido', partido=g['partido'], piernas=[], prob=None, cuota_justa=None, cumple=False, flexible=True)
-    parlays.append(x); g['parlay'] = x
-pool_all = sorted(legs_of(None), key=lambda l: -l['prob'])
+    strict = legs_of(g['partido']); pool_g = strict; flex = False
+    if not best_combo(strict, 2, need_var=False): pool_g = legs_of(g['partido'], True); flex = True
+    bs = best_combo(pool_g, 2, need_var=False)
+    props_g = [l for l in pool_g if l.get('kind') != 'ml']
+    bv = best_combo(props_g, 2); flex_v = flex
+    if not bv: bv = best_combo([l for l in legs_of(g['partido'], True) if l.get('kind') != 'ml'], 2); flex_v = True
+    if bs:
+        xs = mk('Por partido', bs[1], 'El más seguro · piernas sólidas', partido=g['partido'], cumple=(bs[0] >= UMBRAL[2] and not flex), flexible=flex)
+        same = (not bv) or {(l['player_id'], l['stat']) for l in bs[1]} == {(l['player_id'], l['stat']) for l in bv[1]}
+        xv = None if same else mk('Por partido', bv[1], 'Con variedad · solo jugadores' + (' (piernas más débiles)' if flex_v else ''), partido=g['partido'], cumple=(bv[0] >= UMBRAL[2] and not flex_v), flexible=flex_v)
+        if same: xs['etiqueta'] = 'El más seguro y con variedad'
+    else:
+        xs = dict(tipo='Por partido', partido=g['partido'], piernas=[], prob=None, cuota_justa=None, cumple=False, flexible=True); xv = None
+    parlays.append(xs)
+    if xv: parlays.append(xv)
+    g['parlay'] = xs; g['parlay_variado'] = xv
+pool_all = legs_of(None)
+for g in partidos:
+    pool_all += [l for l in legs_of(g['partido']) if l.get('kind') == 'ml']
+pool_all = sorted(pool_all, key=lambda l: -l['prob'])
 gen = []
 for n in (2, 3):
     b = best_combo(pool_all, n, distinct_games=True)
@@ -324,7 +354,8 @@ for n, k in ((2, 5), (3, 4)):
         firma = tuple(sorted(l['pos'] for l in combo)); firmas[firma] = firmas.get(firma, 0) + 1
         cnt = {}
         for l in combo: cnt[l['pos']] = cnt.get(l['pos'], 0) + 1
-        posset = [(f"{cnt[q]} {q}" if cnt[q] > 1 else q) for q in ['QB', 'RB', 'WR', 'TE'] if q in cnt]
+        NOM = {'EQ': 'Ganador'}
+        posset = [(f"{cnt[q]} {NOM.get(q, q)}" if cnt[q] > 1 else NOM.get(q, q)) for q in ['EQ', 'QB', 'RB', 'WR', 'TE'] if q in cnt]
         moderados.append(mk(f'Moderado de {n}', list(combo), 'Riesgo moderado · ' + ' + '.join(posset), moderado=True))
 moderados.sort(key=lambda m: (len(m['piernas']), -m['prob']))
 # ---------- Parlays largos (4 a 6 piernas) con variedad ----------
@@ -345,13 +376,21 @@ for no_td in (False, True):
     for n in (4, 5, 6):
         legs = greedy_long(n, no_td)
         if legs: largos.append(dict(mk(f'Largo de {n}', legs, f"{n} piernas · {'sin TD' if no_td else 'con variedad'}", moderado=True), largo=True))
+# ---------- ¿Quién gana? (centro = spread de la casa; variación real del margen en 2026) ----------
+from scipy.stats import norm as _norm
 # ---------- Puntos totales del partido (centro = total de la casa; variación real de 2026) ----------
 import pandas as _pd
 _g = _pd.read_csv('/home/user/raw/nflverse/games.csv', low_memory=False); _g = _g[(_g.season == 2026) & (_g.game_type == 'REG')]
 _pl = _g[_g.home_score.notna() & _g.total_line.notna()]
 SD_TOT = float(((_pl.home_score + _pl.away_score) - _pl.total_line).std())
+SD_MARG = float(((_pl.home_score - _pl.away_score) - _pl.spread_line).std())
 for g in partidos:
     r = _g[(_g.week == 8) & (_g.away_team == g['visitante']) & (_g.home_team == g['local'])].iloc[0]
+    ml = lambda v: (-v / (-v + 100)) if v < 0 else (100 / (v + 100))
+    ph, pa = ml(r.home_moneyline), ml(r.away_moneyline)
+    g['ganador'] = dict(spread_local=float(r.spread_line), sd=SD_MARG, p_local=float(_norm.cdf(r.spread_line / SD_MARG)), p_visita=float(1 - _norm.cdf(r.spread_line / SD_MARG)),
+                        p_local_ml=float(ph / (ph + pa)), favorito=(g['local'] if r.spread_line > 0 else g['visitante']),
+                        nota=f'Centro: spread de la casa ({g["local"]} {-r.spread_line:+.1f}). Variación real del margen en 2026: ±{SD_MARG:.1f} puntos. Mi estimación por equipos fue menos precisa que la casa, por eso no la uso. En 2026 el favorito ganó 59% de las veces.')
     g['total'] = dict(linea=float(r.total_line), media=float(r.total_line), sd=SD_TOT,
                       pts_visita=float((r.total_line - r.spread_line) / 2), pts_local=float((r.total_line + r.spread_line) / 2),
                       nota=f'Centro: total de la casa ({r.total_line}). Variación real en 2026: ±{SD_TOT:.1f} puntos. Mi estimación por equipos fue menos precisa que la línea de la casa, por eso no la uso.')
