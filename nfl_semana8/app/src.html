@@ -210,6 +210,55 @@ footer .wrap { display: grid; gap: 4px; }
 @media (prefers-reduced-motion: no-preference) {
   .verdict .pct, .verdict .lbl { transition: color .2s ease; }
 }
+.linklike { border: 0; background: none; padding: 0; color: var(--turf); font-weight: 600; text-decoration: underline; cursor: pointer; }
+
+/* ---------- v2: partido con visita/local y favoritos ---------- */
+.match-head { display: grid; gap: 4px; }
+.match-head h2 { font-size: 30px; font-weight: 800; text-transform: uppercase; line-height: 1; }
+.match-head h2 small { font-family: var(--font-body); font-size: 14px; font-weight: 600; color: var(--muted); text-transform: none; letter-spacing: 0; }
+.match-head .at { color: var(--muted); padding: 0 6px; }
+.match-head .meta { color: var(--muted); font-size: 14px; }
+.defs { display: grid; gap: 2px; font-size: 14px; color: var(--muted); border-left: 3px solid var(--rule); padding-left: 10px; }
+.side-label { font-family: var(--font-display); font-weight: 800; text-transform: uppercase; font-size: 15px; letter-spacing: .04em; color: var(--muted); }
+.team h3 { color: var(--ink); font-size: 22px; margin-bottom: 0; }
+.team .team-meta { font-size: 13px; color: var(--muted); margin: 2px 0 8px; display: grid; gap: 2px; }
+.team .team-meta b { color: var(--ink); font-weight: 600; }
+.prow .nm small .role { font-weight: 600; }
+.st { font-size: 11px; font-weight: 700; text-transform: uppercase; border-radius: 3px; padding: 0 5px; margin-left: 4px; vertical-align: 1px; }
+.st.Duda { background: color-mix(in srgb, var(--d4) 18%, transparent); color: var(--d4); }
+.st.Pendiente { background: color-mix(in srgb, var(--muted) 18%, transparent); color: var(--muted); }
+.st.Regresa { background: color-mix(in srgb, var(--turf) 16%, transparent); color: var(--turf); }
+.favs { border-top: 1px solid var(--rule); padding-top: 12px; display: grid; gap: 10px; }
+.favs-head { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: baseline; }
+.favs-head h3 { font-size: 24px; font-weight: 800; text-transform: uppercase; }
+.favs-head span { font-size: 13px; color: var(--muted); }
+.fav-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 10px; }
+.fcard { border: 1px solid var(--rule); border-radius: 8px; padding: 12px 14px; display: grid; gap: 8px; background: var(--surface); }
+.fcard.Alta { border-color: var(--line); box-shadow: inset 4px 0 0 var(--line); }
+.fcard-top { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.fcard-top b { font-family: var(--font-display); font-size: 24px; font-weight: 800; text-transform: uppercase; line-height: 1; }
+.fcard .big { display: flex; gap: 10px; align-items: baseline; }
+.fcard .big .n { font-family: var(--font-display); font-weight: 900; font-size: 40px; line-height: 1; color: var(--turf); }
+.fcard .big .t { font-size: 14px; color: var(--muted); }
+.fcard ul { margin: 0; padding-left: 18px; font-size: 14px; display: grid; gap: 4px; }
+.fcard .risk { font-size: 13px; color: var(--d4); }
+.none { font-size: 14px; color: var(--muted); }
+.factors { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.fx { background: var(--bg); border-radius: 6px; padding: 8px 10px; }
+.fx .k { font-size: 12px; color: var(--muted); }
+.fx .v { font-family: var(--font-display); font-weight: 800; font-size: 24px; line-height: 1.1; }
+.fx .v.up { color: var(--chip-fav); } .fx .v.down { color: var(--chip-dif); }
+.fx .d { font-size: 12px; color: var(--muted); }
+.fx.total { background: var(--turf-soft); }
+.tbl { width: 100%; border-collapse: collapse; font-size: 14px; }
+.tbl th, .tbl td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+.tbl th { font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); font-weight: 600; }
+.tbl-wrap { overflow-x: auto; }
+.blk { display: grid; gap: 10px; margin-top: 26px; }
+.blk h3 { font-size: 26px; font-weight: 800; text-transform: uppercase; }
+.src { font-size: 13px; color: var(--muted); display: grid; gap: 2px; }
+.src a { color: var(--turf); }
+@media (max-width: 900px) { .factors { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 </style>
 </head>
 <body>
@@ -221,7 +270,7 @@ footer .wrap { display: grid; gap: 4px; }
     </div>
     <nav class="tabs" aria-label="Secciones">
       <a href="#partidos" id="tab-partidos">Partidos</a>
-      <a href="#favorables" id="tab-favorables">Partidos favorables</a>
+      <a href="#favoritos" id="tab-favoritos">Mis favoritos</a>
     </nav>
   </div>
 </header>
@@ -232,8 +281,8 @@ footer .wrap { display: grid; gap: 4px; }
     <div class="layout">
       <aside class="side">
         <div class="search">
-          <label for="q">Buscar jugador (los 188 de la semana)</label>
-          <input id="q" type="search" placeholder="Ej. Hockenson, Lamar, Warren" autocomplete="off">
+          <label for="q" id="q-label">Buscar jugador</label>
+          <input id="q" type="search" placeholder="Ej. Bijan, Kyler, Goedert" autocomplete="off">
         </div>
         <div class="games" id="games" role="group" aria-label="Partidos de la semana 8"></div>
       </aside>
@@ -244,12 +293,21 @@ footer .wrap { display: grid; gap: 4px; }
     </div>
   </section>
 
-  <section class="view" id="view-favorables" aria-labelledby="tab-favorables" hidden>
+  <section class="view" id="view-favoritos" aria-labelledby="tab-favoritos" hidden>
     <div class="fav-intro">
-      <h2>Partidos favorables</h2>
+      <h2>Mis favoritos para sobresalir</h2>
       <p id="fav-sub"></p>
     </div>
-    <div class="fav-games" id="fav-games"></div>
+    <div id="fav-all"></div>
+    <div class="blk">
+      <h3>Cambios frente al análisis anterior</h3>
+      <p class="none">Las 21 selecciones de la primera corrida, revisadas con el modelo nuevo.</p>
+      <div class="tbl-wrap"><table class="tbl" id="cambios"></table></div>
+    </div>
+    <div class="blk">
+      <h3>Fuentes del reporte de lesiones</h3>
+      <div class="src" id="fuentes"></div>
+    </div>
   </section>
 </main>
 
@@ -266,11 +324,14 @@ footer .wrap { display: grid; gap: 4px; }
   const P = window.Props;
   const AVISO = 'Análisis de patrones, no garantía ni recomendación de apuesta. Solo mayores de 18 años.';
   const POS_ORDER = { QB: 0, RB: 1, WR: 2, TE: 3 };
-  const LECT_ORDER = { Favorable: 0, Intermedio: 1, 'Difícil': 2 };
+  const ROLE_ORDER = { Titular: 0, 'Rotación': 1, 'Rol menor': 2 };
   const LEVELS = ['Muy fácil', 'Fácil', 'Parejo', 'Difícil', 'Muy difícil'];
-  const CALIB = { 'Muy fácil': 90, 'Fácil': 71, 'Parejo': 48, 'Difícil': 30, 'Muy difícil': 11 };
+  const CALIB = M.modelo.calibracion;
   const byId = new Map(D.jugadores.map(j => [j.player_id, j]));
-  const selByPid = new Map(D.selecciones.map(s => [s.player_id, s]));
+  const gameBy = new Map(D.partidos.map(g => [g.partido, g]));
+  const favBy = new Map();
+  D.partidos.forEach(g => g.favoritos.forEach(f => favBy.set(f.player_id, f)));
+  const firstFav = D.partidos.flatMap(g => g.favoritos).find(f => f.confianza === 'Alta');
 
   const state = { view: 'partidos', game: D.partidos[0].partido, pos: 'Todos', pid: null, statKey: null, lines: {}, q: '' };
 
@@ -278,75 +339,77 @@ footer .wrap { display: grid; gap: 4px; }
   const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const fmt = (x, d = 1) => (x == null || isNaN(x)) ? '—' : Number(x).toLocaleString('es-MX', { minimumFractionDigits: d, maximumFractionDigits: d });
   const pct = p => p >= 0.995 && p < 1 ? '>99%' : p > 0 && p < 0.005 ? '<1%' : Math.round(p * 100) + '%';
+  const sgn = f => { const x = Math.round((f - 1) * 100); return x === 0 ? '0%' : (x > 0 ? '+' : '−') + Math.abs(x) + '%'; };
   const lvClass = lbl => 'lv' + (LEVELS.indexOf(lbl) + 1);
-  const isInt = s => s.tipo !== 'cont';
   const unit = s => s.tipo === 'cont' ? 'yds' : '';
+  const norm = s => String(s).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
 
-  function injuryFlag(j) {
-    const e = j.estado_lesion || '';
-    if (e.startsWith('Reserva')) return 'Fuera (reserva)';
-    if (/No practicó/.test(e)) return 'No practicó';
-    if (/Limitado/.test(e)) return 'Limitado';
-    if (/Sin reporte/.test(e)) return 'Sin reporte';
-    return '';
-  }
   function lineRange(s) {
     const maxReg = Math.max(0, ...s.registro.map(r => r.valor));
-    let hi = Math.max(2.5 * s.proyeccion, maxReg + 10, s.tipo === 'td' ? 3 : 0);
-    hi = Math.ceil(hi * 2) / 2;
-    return { lo: 0, hi, step: 0.5 };
+    let hi = Math.max(2.5 * s.proyeccion, maxReg + 10, s.tipo === 'td' ? 3 : 0, s.linea_sugerida + 5);
+    return { lo: 0, hi: Math.ceil(hi * 2) / 2, step: 0.5 };
   }
-  function getLine(j, s) {
-    const k = j.player_id + '|' + s.key;
-    return k in state.lines ? state.lines[k] : s.linea_sugerida;
-  }
+  const getLine = (j, s) => { const k = j.player_id + '|' + s.key; return k in state.lines ? state.lines[k] : s.linea_sugerida; };
   function lineText(s, l) {
     if (s.tipo === 'cont') return fmt(l, l % 1 ? 1 : 0) + ' yds o más';
-    const k = Math.max(0, Math.ceil(l - 1e-9));
-    return k + ' o más';
+    return Math.max(0, Math.ceil(l - 1e-9)) + ' o más';
   }
-  function statAtSuggested(s) {
-    const p = P.probLlegar(s, s.linea_sugerida, M);
-    return { p, lbl: P.etiquetaDificultad(p, M) };
+  function statusTag(j) {
+    if (j.estado === 'Duda') return '<span class="st Duda">Duda</span>';
+    if (j.estado === 'Pendiente') return '<span class="st Pendiente">Pendiente</span>';
+    if (j.regresa) return '<span class="st Regresa">Regresa</span>';
+    return '';
   }
 
   /* ---------------- encabezado y avisos ---------------- */
-  $('sub').textContent = 'NFL ' + M.temporada + ' · Semana ' + M.semana + ' · datos al ' + M.datos_al;
-  $('aviso').innerHTML = '<strong>' + esc(AVISO) + '</strong><span>Lesiones: práctica hasta el jueves 29-oct; designaciones finales sin verificar. SEA sin reporte de la semana 8.</span>';
+  $('sub').textContent = 'NFL ' + M.temporada + ' · Semana ' + M.semana + ' · ' + M.tipo_corrida + ' · ' + M.datos_al;
+  $('q-label').textContent = 'Buscar jugador (los ' + D.jugadores.length + ' con participación probable)';
+  $('aviso').innerHTML = '<strong>' + esc(AVISO) + '</strong><span>' + esc(M.avisos[1]) + '</span>';
+  const T = M.modelo.prueba;
   $('foot').innerHTML = '<div><strong>' + esc(AVISO) + '</strong></div>' +
-    '<div>Fuente: nflverse (datos oficiales de juego de la NFL). No se usan cuotas ni líneas de casas de apuestas.</div>' +
-    '<div>Modelo probado en las semanas 4 a 8 usando solo datos previos a cada juego (10,465 predicciones). El ajuste por rival mejora poco la predicción: error 0.1998 sin ajuste, 0.1985 con ajuste, 0.1980 recalibrado.</div>';
+    '<div>' + esc(M.avisos[2]) + '</div>' +
+    '<div>Modelo probado en las semanas 4 a 8 con solo datos previos a cada juego. Error de predicción en semanas 7-8: ' +
+    fmt(T.sin_ajuste, 4) + ' sin ajustes, ' + fmt(T.anterior, 4) + ' con el modelo anterior y ' + fmt(T.v2, 4) + ' con este (menos es mejor).</div>';
 
   /* ---------------- partidos ---------------- */
-  function playersOf(game) { return D.jugadores.filter(j => j.partido === game); }
   function renderGames() {
-    const el = $('games');
-    el.innerHTML = D.partidos.map(g => {
-      const n = g.selecciones.length;
-      const fecha = g.fecha_hora_monterrey.replace(/-2026/, '');
+    $('games').innerHTML = D.partidos.map(g => {
+      const n = g.favoritos.length;
       return '<button class="game" type="button" data-game="' + esc(g.partido) + '" aria-pressed="' + (state.game === g.partido && !state.q) + '">' +
         '<span class="m">' + esc(g.visitante) + ' @ ' + esc(g.local) + '</span>' +
-        '<span class="n"><b>' + n + '</b>' + (n === 1 ? 'selección' : 'selecciones') + '</span>' +
-        '<span class="t">' + esc(fecha) + ' · ' + esc(g.record_visitante.replace(/-0$/, '')) + ' vs ' + esc(g.record_local.replace(/-0$/, '')) + '</span>' +
+        '<span class="n"><b>' + n + '</b>' + (n === 1 ? 'favorito' : 'favoritos') + '</span>' +
+        '<span class="t">' + esc(g.fecha_hora_monterrey.replace(/-2026/, '')) + '</span>' +
         '</button>';
     }).join('');
   }
   function prow(j) {
-    const sel = selByPid.get(j.player_id);
-    const fl = injuryFlag(j);
+    const f = favBy.get(j.player_id);
     return '<button class="prow" type="button" data-pid="' + j.player_id + '" aria-pressed="' + (state.pid === j.player_id) + '">' +
       '<span class="pos">' + j.pos + '</span>' +
-      '<span class="nm">' + esc(j.jugador) + (sel ? '<span class="star">' + esc(sel.confianza.toUpperCase()) + '</span>' : '') +
-      '<small>' + esc(j.equipo) + ' vs ' + esc(j.rival) + (fl ? ' · <span class="flag">' + esc(fl) + '</span>' : '') + '</small></span>' +
-      '<span class="chip ' + j.lectura_general + '">' + j.lectura_general + '</span>' +
+      '<span class="nm">' + esc(j.jugador) + (f ? '<span class="star">★ ' + esc(f.confianza.toUpperCase()) + '</span>' : '') + statusTag(j) +
+      '<small><span class="role">' + esc(j.rol) + '</span>' + (j.pos !== 'QB' && !j.regresa ? ' · ' + j.snaps_ult3 + '% snaps' : '') +
+      (j.stats.length ? '' : ' · sin juegos suficientes') + '</small></span>' +
+      (j.lectura_general ? '<span class="chip ' + j.lectura_general + '">' + j.lectura_general + '</span>' : '<span></span>') +
       '</button>';
   }
   function sortPlayers(arr) {
-    return arr.slice().sort((a, b) => POS_ORDER[a.pos] - POS_ORDER[b.pos] || LECT_ORDER[a.lectura_general] - LECT_ORDER[b.lectura_general] || a.rank_general - b.rank_general || a.jugador.localeCompare(b.jugador));
+    return arr.slice().sort((a, b) => POS_ORDER[a.pos] - POS_ORDER[b.pos] || ROLE_ORDER[a.rol] - ROLE_ORDER[b.rol] || b.snaps_ult3 - a.snaps_ult3 || a.jugador.localeCompare(b.jugador));
   }
   function posFilter() {
     return '<div class="posf" role="group" aria-label="Filtrar por posición">' + ['Todos', 'QB', 'RB', 'WR', 'TE'].map(p =>
       '<button type="button" data-pos="' + p + '" aria-pressed="' + (state.pos === p) + '">' + p + '</button>').join('') + '</div>';
+  }
+  function favCard(f, withGame) {
+    const reasons = f.por_que.map(r => '<li>' + esc(r) + '</li>').join('');
+    return '<div class="fcard ' + f.confianza + '">' +
+      '<div class="fcard-top"><b>' + esc(f.jugador) + '</b><span class="conf ' + f.confianza + '">' + f.confianza + '</span>' +
+      '<span class="cat">' + f.pos + ' · ' + esc(f.equipo) + (withGame ? ' · ' + esc(byId.get(f.player_id).partido) : '') + '</span></div>' +
+      '<div class="big"><span class="n">' + pct(f.prob) + '</span><span class="t">de superar su promedio en ' + esc(f.etiqueta.toLowerCase()) +
+      ' (' + fmt(f.promedio) + '; línea ' + fmt(f.linea, f.linea % 1 ? 1 : 0) + '). Proyección: ' + fmt(f.proyeccion) + ' (' + sgn(f.factor) + ').</span></div>' +
+      '<ul>' + reasons + '</ul>' +
+      (f.riesgo ? '<div class="risk">Riesgo: ' + esc(f.riesgo) + '</div>' : '') +
+      '<button type="button" class="open" data-open="' + f.player_id + '">Abrir ficha y mover la línea</button>' +
+      '</div>';
   }
   function renderRoster() {
     const el = $('roster');
@@ -358,54 +421,84 @@ footer .wrap { display: grid; gap: 4px; }
         (hits.length ? '<div class="plist">' + fpos(hits).map(prow).join('') + '</div>' : '<p class="empty">Ningún jugador coincide. Prueba con el apellido o el equipo (ej. MIN).</p>');
       return;
     }
-    const g = D.partidos.find(x => x.partido === state.game);
-    const ps = playersOf(g.partido);
-    const team = t => sortPlayers(fpos(ps.filter(j => j.equipo === t)));
-    const col = t => '<div class="team"><h3>' + esc(t) + (t === g.local ? ' · local' : ' · visita') + '</h3><div class="plist">' +
-      (team(t).map(prow).join('') || '<p class="empty">Sin jugadores en esta posición.</p>') + '</div></div>';
-    el.innerHTML = '<div class="roster-head"><h2>' + esc(g.partido) + '</h2><span class="meta">' + esc(g.fecha_hora_monterrey) + ' (Monterrey) · ' + esc(g.estadio) + '</span>' + posFilter() + '</div>' +
-      '<div class="teams">' + col(g.visitante) + col(g.local) + '</div>';
+    const g = gameBy.get(state.game);
+    const ps = D.jugadores.filter(j => j.partido === g.partido);
+    const col = (t, lado, nombre) => {
+      const list = sortPlayers(fpos(ps.filter(j => j.equipo === t)));
+      const nj = g.no_juegan[t] || [];
+      const ol = g.linea_ofensiva[t];
+      return '<div class="team"><div class="side-label">' + lado + '</div><h3>' + esc(nombre) + '</h3>' +
+        '<div class="team-meta">' +
+          '<span><b>No juegan:</b> ' + (nj.length ? esc(nj.join(', ')) : 'nadie de la ofensiva en el reporte final') + '</span>' +
+          '<span><b>Línea ofensiva:</b> ' + (ol ? esc(ol) : 'titulares completos') + '</span>' +
+        '</div>' +
+        '<div class="plist">' + (list.map(prow).join('') || '<p class="empty">Sin jugadores en esta posición.</p>') + '</div></div>';
+    };
+    const favs = g.favoritos;
+    el.innerHTML =
+      '<div class="match-head">' +
+        '<h2>' + esc(g.nombre_visitante) + ' <small>(visita)</small><span class="at">@</span>' + esc(g.nombre_local) + ' <small>(local)</small></h2>' +
+        '<span class="meta">' + esc(g.fecha_hora_monterrey) + ' (Monterrey) · ' + esc(g.estadio) + ' · ' + esc(g.visitante) + ' ' + esc(g.record_visitante.replace(/-0$/, '')) +
+        ', ' + esc(g.local) + ' ' + esc(g.record_local.replace(/-0$/, '')) + (g.reporte_pendiente ? ' · reporte final de lesiones pendiente (sábado)' : '') + '</span>' +
+      '</div>' +
+      '<div class="defs">' + g.defensas.map(t => '<span>' + esc(t) + '</span>').join('') + '</div>' +
+      '<div class="roster-head">' + posFilter() + '</div>' +
+      '<div class="teams">' + col(g.visitante, 'Visita', g.nombre_visitante) + col(g.local, 'Local', g.nombre_local) + '</div>' +
+      '<div class="favs"><div class="favs-head"><h3>Mis favoritos para sobresalir</h3><span>Que superen su propio promedio de la temporada</span></div>' +
+        (favs.length ? '<div class="fav-list">' + favs.map(f => favCard(f, false)).join('') + '</div>'
+          : '<p class="none">Sin favorito claro en este partido: nadie combina buen ajuste (+4% o más) con 50% o más de superar su promedio.' +
+            (g.mas_cercano ? ' El más cercano: <button type="button" class="linklike" data-pid="' + g.mas_cercano.player_id + '">' + esc(g.mas_cercano.jugador) + '</button> (' +
+              pct(g.mas_cercano.prob) + ' en ' + esc(g.mas_cercano.etiqueta.toLowerCase()) + ', ajuste ' + sgn(g.mas_cercano.factor) + ').' : '') + '</p>') +
+      '</div>';
   }
-  function norm(s) { return String(s).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim(); }
 
   /* ---------------- ficha ---------------- */
   function renderFicha() {
     const el = $('ficha');
     const j = byId.get(state.pid);
-    if (!j) {
-      el.innerHTML = '<p class="empty">Elige un jugador de la lista para ver qué tan difícil es que llegue a la línea que tú pongas.</p>';
-      return;
-    }
+    if (!j) { el.innerHTML = '<p class="empty">Elige un jugador para ver qué tan difícil es que llegue a la línea que tú pongas.</p>'; return; }
+    const f = favBy.get(j.player_id);
+    const head =
+      '<div class="ficha-head">' +
+        '<div><h2>' + esc(j.jugador) + '</h2><div class="sub">' + j.pos + ' · ' + esc(j.equipo) + ' (' + j.lado + ') vs ' + esc(j.rival) + ' · ' + esc(j.rol) +
+        ' · ' + j.pj + ' PJ' + (j.pos === 'QB' ? ' (titularidades con 15+ intentos)' : '') + (j.muestra === 'corta' ? ' · muestra corta' : '') + '</div></div>' +
+        '<div class="right">' + (j.lectura_general ? '<span class="chip ' + j.lectura_general + '">Matchup ' + j.lectura_general + '</span>' +
+        '<span class="sub">defensa rival #' + j.rank_general + ' de 32 en lo que permite a ' + j.pos + ' (ajustado)</span>' : '') + '</div>' +
+      '</div>' +
+      '<div class="estado' + (j.estado !== 'OK' ? ' warn' : '') + '"><span><span class="k">Lesión:</span> ' + esc(j.estado_lesion) + '</span>' +
+        '<span><span class="k">Favorito:</span> ' + (f ? 'sí, confianza ' + esc(f.confianza) : 'no') + '</span></div>';
+    if (!j.stats.length) { el.innerHTML = head + '<p class="empty">Tiene menos de 2 juegos con su equipo: no hay datos suficientes para calcular probabilidades.</p>'; return; }
     if (!j.stats.some(s => s.key === state.statKey)) state.statKey = j.stats[0].key;
     const s = j.stats.find(x => x.key === state.statKey);
-    const fl = injuryFlag(j);
-    const sel = selByPid.get(j.player_id);
-    const verdictTxt = { 'Incluido-Alta': 'En el análisis: confianza ALTA', 'Incluido-Media': 'En el análisis: confianza MEDIA', 'Descartado': 'No entró en las 21 selecciones' }[j.veredicto] || j.veredicto;
-    el.innerHTML =
-      '<div class="ficha-head">' +
-        '<div><h2>' + esc(j.jugador) + '</h2><div class="sub">' + j.pos + ' · ' + esc(j.equipo) + ' vs ' + esc(j.rival) + ' · ' + esc(j.partido) + ' · ' + j.pj + ' PJ' + (j.pos === 'QB' ? ' (titularidades con 15+ intentos)' : '') + '</div></div>' +
-        '<div class="right"><span class="chip ' + j.lectura_general + '">Matchup ' + j.lectura_general + '</span>' +
-        '<span class="sub">defensa rival #' + j.rank_general + ' de 32 en lo que permite a ' + j.pos + '</span></div>' +
-      '</div>' +
-      '<div class="estado' + (fl ? ' warn' : '') + '"><span><span class="k">Lesión:</span> ' + esc(j.estado_lesion) + '</span><span><span class="k">Análisis:</span> ' + esc(verdictTxt) + '</span></div>' +
+    el.innerHTML = head +
       '<div class="stabs" role="tablist" aria-label="Estadística">' + j.stats.map(x =>
         '<button type="button" role="tab" id="st-' + x.key + '" data-stat="' + x.key + '" aria-selected="' + (x.key === s.key) + '">' + esc(x.etiqueta) + '</button>').join('') + '</div>' +
       '<div class="stat-body" id="stat-body"></div>';
     renderStat(j, s);
   }
-
+  function fxBox(k, f, d, cls) {
+    const c = Math.round((f - 1) * 100) > 0 ? 'up' : (Math.round((f - 1) * 100) < 0 ? 'down' : '');
+    return '<div class="fx ' + (cls || '') + '"><div class="k">' + esc(k) + '</div><div class="v ' + c + '">' + sgn(f) + '</div><div class="d">' + esc(d) + '</div></div>';
+  }
   function renderStat(j, s) {
     const body = $('stat-body');
     const r = lineRange(s);
     const l = getLine(j, s);
-    const fm = s.factor_matchup - 1;
-    const isTd = s.tipo === 'td';
+    const fx = j.factores;
+    const ausK = s.key === 'rush_yds' || s.key === 'car' ? 'acarreos' : 'targets';
+    const aus = fx.ausentes.filter(a => a[ausK] >= (ausK === 'acarreos' ? 0.15 : 0.08)).map(a => a.jugador + (a.peso < 1 ? ' (duda)' : ''));
     body.innerHTML =
       '<div class="facts">' +
         fact('Promedio temporada', fmt(s.media_temporada), unit(s)) +
-        fact('Proyección vs ' + j.rival, fmt(s.proyeccion), (fm >= 0 ? '+' : '') + fmt(fm * 100, 1) + '% por el rival') +
-        fact(j.rival + ' permite por juego', fmt(s.rival_permite_pj), '#' + s.rival_rank + ' de 32') +
+        fact('Proyección vs ' + j.rival, fmt(s.proyeccion), sgn(s.factor_total) + ' total') +
+        fact(j.rival + ' permite (ajustado)', sgn(s.rival_indice), '#' + s.rival_rank + ' de 32 · ' + fmt(s.rival_permite_pj) + ' por juego sin ajustar') +
         '<div class="fact"><div class="k">Matchup en esta estadística</div><div class="v"><span class="chip ' + s.lectura + '">' + s.lectura + '</span></div></div>' +
+      '</div>' +
+      '<div class="factors">' +
+        fxBox('Rival (ajustado por ambos lados)', s.f_rival, 'El rival permite ' + sgn(s.rival_indice) + '; sus rivales previos permitían ' + sgn(s.calendario_indice) + '.') +
+        fxBox('Línea ofensiva', s.f_linea, (fx.ol_nota || 'Titulares completos') + '. Solo afecta lo terrestre.') +
+        fxBox('Compañeros', s.f_companeros, aus.length ? 'Fuera: ' + aus.join(', ') + '.' : 'Sin cambios relevantes de compañeros.') +
+        fxBox('Ajuste total', s.factor_total, 'Sobre su promedio de ' + fmt(s.media_temporada) + '.', 'total') +
       '</div>' +
       '<div class="ctl">' +
         '<div class="ctl-row">' +
@@ -413,10 +506,11 @@ footer .wrap { display: grid; gap: 4px; }
           '<div class="num"><button type="button" id="ln-minus" aria-label="Bajar 0.5">−</button>' +
           '<input id="ln-num" type="number" inputmode="decimal" step="0.5" min="0" max="' + r.hi + '" value="' + l + '">' +
           '<button type="button" id="ln-plus" aria-label="Subir 0.5">+</button></div>' +
-          '<button type="button" class="reset" id="ln-reset">Volver a la sugerida (' + fmt(s.linea_sugerida, s.linea_sugerida % 1 ? 1 : 0) + ')</button>' +
+          '<button type="button" class="reset" id="ln-reset">Volver a la línea justa (' + fmt(s.linea_sugerida, s.linea_sugerida % 1 ? 1 : 0) + ')</button>' +
           '<span class="hint" id="ln-hint"></span>' +
         '</div>' +
         '<input id="ln-range" type="range" min="0" max="' + r.hi + '" step="0.5" value="' + Math.min(l, r.hi) + '" aria-label="Mover la línea de ' + esc(s.etiqueta) + '">' +
+        '<span class="hint">Línea justa: donde la probabilidad queda más cerca de 50%.</span>' +
       '</div>' +
       '<div class="verdict" id="verdict" aria-live="polite"></div>' +
       '<div class="charts">' +
@@ -424,8 +518,8 @@ footer .wrap { display: grid; gap: 4px; }
         '<div class="chart"><h3>Juego por juego contra tu línea</h3><p id="log-cap"></p><div id="log"></div></div>' +
       '</div>' +
       '<div class="note">' +
-        '<span>Proyección = promedio × (1 + 0.3 × (lo que permite el rival ÷ dureza de su calendario − 1)). El rival mueve poco la proyección; pesa más la variación del propio jugador.</span>' +
-        (isTd ? '<span>TD: un juego con 1 o más cuenta como “llegó”. Las líneas se redondean hacia arriba: 0.5 significa 1 o más.</span>' : isInt(s) ? '<span>En conteos, una línea con .5 se redondea hacia arriba: 5.5 significa 6 o más.</span>' : '') +
+        '<span>Cómo se calcula: su promedio × ajuste del rival × línea ofensiva × compañeros. El rival se mide por ambos lados: lo que permite su defensa ajustado por las ofensivas que enfrentó, contra lo que permitían las defensas que este jugador ya enfrentó.</span>' +
+        (s.tipo === 'td' ? '<span>TD: una línea de 0.5 significa 1 o más.</span>' : s.tipo === 'count' ? '<span>En conteos, una línea con .5 se redondea hacia arriba: 5.5 significa 6 o más.</span>' : '') +
       '</div>';
     updateLine(j, s, l);
     const num = $('ln-num'), rng = $('ln-range');
@@ -448,7 +542,7 @@ footer .wrap { display: grid; gap: 4px; }
       '<div class="pct ' + cls + '">' + pct(p) + '</div>' +
       '<div class="lbl ' + cls + '">' + lbl + '</div>' +
       '<div class="exp">Probabilidad de que ' + esc(j.jugador) + ' llegue a ' + esc(lineText(s, l)) + ' de ' + esc(s.etiqueta.toLowerCase()) + ' vs ' + esc(j.rival) + '. ' +
-        'Cuando la app dijo “' + lbl + '” en las semanas 7 y 8, se cumplió el ' + CALIB[lbl] + '% de las veces.</div>' +
+        'En la prueba con resultados reales (semanas 4 a 8), cuando el modelo dijo “' + lbl + '” se cumplió el ' + CALIB[lbl] + '% de las veces.</div>' +
       '<div class="scale" aria-hidden="true">' + LEVELS.slice().reverse().map(x => '<div class="' + lvClass(x) + (x === lbl ? ' on' : '') + '">' + x + '</div>').join('') + '</div>';
     drawDist(s, l);
     drawLog(s, l);
@@ -463,12 +557,11 @@ footer .wrap { display: grid; gap: 4px; }
     const out = []; for (let v = 0; v <= max + 1e-9; v += step) out.push(+v.toFixed(6)); return out;
   }
   function drawDist(s, l) {
-    const r = lineRange(s);
-    const xmax = r.hi;
+    const xmax = lineRange(s).hi;
     const sx = x => PADL + (x / xmax) * (W - PADL - PADR);
     const base = H - PADB;
     let marks = '', ymax = 0;
-    const cssV = n => 'var(--' + n + ')';
+    if (s.dist.dist === 'zero') { $('dist').innerHTML = ''; $('dist-cap').textContent = 'Sin producción registrada en esta estadística.'; return; }
     if (s.tipo === 'cont') {
       const N = 140, h = xmax / N, pts = [];
       for (let i = 0; i <= N; i++) {
@@ -480,52 +573,48 @@ footer .wrap { display: grid; gap: 4px; }
       const path = arr => arr.map((p, i) => (i ? 'L' : 'M') + sx(p[0]).toFixed(1) + ' ' + sy(p[1]).toFixed(1)).join(' ');
       const under = pts.filter(p => p[0] < l), over = pts.filter(p => p[0] >= l);
       const area = (arr, fill, op) => arr.length < 2 ? '' : '<path d="' + path(arr) + ' L' + sx(arr[arr.length - 1][0]).toFixed(1) + ' ' + base + ' L' + sx(arr[0][0]).toFixed(1) + ' ' + base + ' Z" fill="' + fill + '" fill-opacity="' + op + '"/>';
-      marks += area(under, cssV('muted'), .18) + area(over, cssV('turf'), .55);
-      marks += '<path d="' + path(pts) + '" fill="none" stroke="' + cssV('turf') + '" stroke-width="2"/>';
+      marks += area(under, 'var(--muted)', .18) + area(over, 'var(--turf)', .55);
+      marks += '<path d="' + path(pts) + '" fill="none" stroke="var(--turf)" stroke-width="2"/>';
       $('dist-cap').textContent = 'Forma de los valores posibles según el modelo. En verde: llegar o pasar la línea.';
     } else {
-      const k0 = Math.max(0, Math.ceil(l - 1e-9));
-      const kmax = Math.floor(xmax);
-      const pm = [];
-      for (let k = 0; k <= kmax; k++) { const v = P.probRaw(s.dist, k) - P.probRaw(s.dist, k + 1); pm.push(Math.max(0, v)); ymax = Math.max(ymax, v); }
+      const k0 = Math.max(0, Math.ceil(l - 1e-9)), kmax = Math.floor(xmax), pm = [];
+      for (let k = 0; k <= kmax; k++) { const v = Math.max(0, P.probRaw(s.dist, k) - P.probRaw(s.dist, k + 1)); pm.push(v); ymax = Math.max(ymax, v); }
       const sy = y => base - (y / (ymax || 1)) * (base - PADT);
       const bw = Math.max(2, (W - PADL - PADR) / (kmax + 1) * 0.72);
       pm.forEach((v, k) => {
-        const x = sx(k) - bw / 2;
-        marks += '<rect x="' + x.toFixed(1) + '" y="' + sy(v).toFixed(1) + '" width="' + bw.toFixed(1) + '" height="' + (base - sy(v)).toFixed(1) + '" fill="' + (k >= k0 ? cssV('turf') : cssV('muted')) + '" fill-opacity="' + (k >= k0 ? .85 : .3) + '"/>';
+        marks += '<rect x="' + (sx(k) - bw / 2).toFixed(1) + '" y="' + sy(v).toFixed(1) + '" width="' + bw.toFixed(1) + '" height="' + (base - sy(v)).toFixed(1) + '" fill="' + (k >= k0 ? 'var(--turf)' : 'var(--muted)') + '" fill-opacity="' + (k >= k0 ? .85 : .3) + '"/>';
       });
       $('dist-cap').textContent = 'Probabilidad de cada resultado según el modelo. En verde: ' + k0 + ' o más.';
     }
-    const ticks = niceTicks(xmax, 6).filter(t => t <= xmax);
     let axis = '<line x1="' + PADL + '" x2="' + (W - PADR) + '" y1="' + base + '" y2="' + base + '" stroke="var(--rule)"/>';
-    ticks.forEach(t => { axis += '<text x="' + sx(t).toFixed(1) + '" y="' + (base + 16) + '" text-anchor="middle">' + fmt(t, t % 1 ? 1 : 0) + '</text>'; });
+    niceTicks(xmax, 6).filter(t => t <= xmax).forEach(t => { axis += '<text x="' + sx(t).toFixed(1) + '" y="' + (base + 16) + '" text-anchor="middle">' + fmt(t, t % 1 ? 1 : 0) + '</text>'; });
     const lx = sx(Math.min(l, xmax));
     const ylw = '<line x1="' + lx.toFixed(1) + '" x2="' + lx.toFixed(1) + '" y1="' + PADT + '" y2="' + base + '" stroke="var(--line)" stroke-width="4"/>' +
       '<line x1="' + lx.toFixed(1) + '" x2="' + lx.toFixed(1) + '" y1="' + PADT + '" y2="' + base + '" stroke="var(--line-ink)" stroke-width="1" stroke-opacity=".35"/>';
     const px = sx(Math.min(s.proyeccion, xmax));
+    const anchor = px > W - 120 ? 'end' : 'start', tx = anchor === 'end' ? px - 4 : px + 4;
     const proj = '<line x1="' + px.toFixed(1) + '" x2="' + px.toFixed(1) + '" y1="' + PADT + '" y2="' + base + '" stroke="var(--ink)" stroke-dasharray="3 3" stroke-opacity=".6"/>' +
-      '<text x="' + (px + 4).toFixed(1) + '" y="' + (PADT + 10) + '">proyección ' + fmt(s.proyeccion) + '</text>';
-    $('dist').innerHTML = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Distribución del modelo con tu línea en ' + fmt(l) + '">' + axis + marks + proj + ylw + '</svg>';
+      '<text class="vl" x="' + tx.toFixed(1) + '" y="' + (PADT + 10) + '" text-anchor="' + anchor + '">proyección ' + fmt(s.proyeccion) + '</text>';
+    $('dist').innerHTML = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Distribución del modelo con tu línea en ' + fmt(l) + '">' + axis + marks + ylw + proj + '</svg>';
   }
   function drawLog(s, l) {
     const reg = s.registro;
     if (!reg.length) { $('log').innerHTML = ''; return; }
-    const vmax = Math.max(l, ...reg.map(r => r.valor), 1) * 1.08;
+    const vmax = Math.max(l, ...reg.map(r => r.valor), 1) * 1.1;
     const n = reg.length, slot = (W - PADL - PADR) / n, bw = Math.min(46, slot * 0.66);
     const base = H - PADB - 10;
-    const sy = v => base - (v / vmax) * (base - PADT);
+    const sy = v => base - (Math.max(0, v) / vmax) * (base - PADT);
     let g = '', labels = '';
     niceTicks(vmax, 4).filter(t => t <= vmax).forEach(t => {
       g += '<line x1="' + PADL + '" x2="' + (W - PADR) + '" y1="' + sy(t).toFixed(1) + '" y2="' + sy(t).toFixed(1) + '" stroke="var(--rule)" stroke-opacity=".7"/>' +
         '<text x="' + (PADL - 6) + '" y="' + (sy(t) + 4).toFixed(1) + '" text-anchor="end">' + fmt(t, t % 1 ? 1 : 0) + '</text>';
     });
     reg.forEach((r, i) => {
-      const cx = PADL + slot * (i + 0.5), hit = r.valor >= l;
-      const y = sy(r.valor);
-      labels += '<text class="vl" x="' + cx.toFixed(1) + '" y="' + (y - 5).toFixed(1) + '" text-anchor="middle">' + fmt(r.valor, r.valor % 1 ? 1 : 0) + '</text>';
+      const cx = PADL + slot * (i + 0.5), hit = r.valor >= l, y = sy(r.valor);
       g += '<rect x="' + (cx - bw / 2).toFixed(1) + '" y="' + y.toFixed(1) + '" width="' + bw.toFixed(1) + '" height="' + Math.max(0, base - y).toFixed(1) + '" rx="2" fill="' + (hit ? 'var(--turf)' : 'var(--muted)') + '" fill-opacity="' + (hit ? .9 : .35) + '"/>' +
-        '<text x=""' + cx.toFixed(1) + '" y="' + (base + 14) + '" text-anchor="middle">S' + r.sem + '</text>' +
+        '<text x="' + cx.toFixed(1) + '" y="' + (base + 14) + '" text-anchor="middle">S' + r.sem + '</text>' +
         '<text x="' + cx.toFixed(1) + '" y="' + (base + 27) + '" text-anchor="middle">' + (r.cond === 'V' ? '@' : 'vs ') + esc(r.rival) + '</text>';
+      labels += '<text class="vl" x="' + cx.toFixed(1) + '" y="' + (y - 5).toFixed(1) + '" text-anchor="middle">' + fmt(r.valor, r.valor % 1 ? 1 : 0) + '</text>';
     });
     const ly = sy(l);
     g += '<line x1="' + PADL + '" x2="' + (W - PADR) + '" y1="' + ly.toFixed(1) + '" y2="' + ly.toFixed(1) + '" stroke="var(--line)" stroke-width="4"/>' +
@@ -533,56 +622,31 @@ footer .wrap { display: grid; gap: 4px; }
     $('log').innerHTML = '<svg viewBox="0 0 ' + W + ' ' + (H + 8) + '" role="img" aria-label="Valores por juego contra tu línea">' + g + labels + '</svg>';
   }
 
-  /* ---------------- favorables ---------------- */
+  /* ---------------- favoritos (todos) ---------------- */
   function renderFav() {
-    const alta = D.selecciones.filter(s => s.confianza === 'Alta').length;
-    $('fav-sub').textContent = D.selecciones.length + ' selecciones en ' + D.partidos.filter(g => g.selecciones.length).length +
-      ' partidos (' + alta + ' de confianza alta). Cada una muestra el % de llegar a su línea sugerida con el modelo de la app. Abre la ficha para mover la línea.';
-    const order = { Alta: 0, Media: 1 };
-    const games = D.partidos.filter(g => g.selecciones.length).map(g => {
-      const picks = D.selecciones.filter(s => s.partido === g.partido).sort((a, b) => order[a.confianza] - order[b.confianza]);
-      return { g, picks, alta: picks.filter(p => p.confianza === 'Alta').length };
-    }).sort((a, b) => b.alta - a.alta || b.picks.length - a.picks.length);
-    $('fav-games').innerHTML = games.map(({ g, picks }) =>
-      '<article class="panel fg">' +
-        '<div class="fg-head"><h3>' + esc(g.partido) + '</h3><span class="meta">' + esc(g.fecha_hora_monterrey) + ' (Monterrey) · ' + esc(g.estadio) + '</span></div>' +
-        '<div class="fg-why">' + esc(g.por_que) + ' <em>Puede romperlo:</em> ' + esc(g.que_lo_puede_romper) + '</div>' +
-        '<div class="picks">' + picks.map(pickCard).join('') + '</div>' +
-      '</article>').join('') +
-      '<p class="fav-legend">Los textos de “por qué” vienen del análisis original (calculado con peso de rival 0.6). Los % usan el modelo calibrado de la app (peso 0.3). Favorable no es lo mismo que fácil: si la línea está cerca de la proyección, el % ronda el 50%.</p>';
-  }
-  function pickCard(sel) {
-    const j = byId.get(sel.player_id);
-    const fl = j ? injuryFlag(j) : '';
-    const rows = j ? j.stats.map(s => {
-      const r = statAtSuggested(s);
-      return '<div><span>' + esc(s.etiqueta) + ' · ' + esc(lineText(s, s.linea_sugerida)) + '</span><span class="p ' + lvClass(r.lbl) + '">' + pct(r.p) + '</span><span class="l ' + lvClass(r.lbl) + '">' + r.lbl + '</span></div>';
-    }).join('') : '';
-    const pq = sel.por_que_confianza || {};
-    return '<div class="pick">' +
-      '<div class="pick-top"><b>' + esc(sel.jugador) + '</b><span class="conf ' + sel.confianza + '">' + sel.confianza + '</span><span class="chip ' + sel.lectura + '">' + sel.lectura + '</span></div>' +
-      '<div class="cat">' + sel.pos + ' · ' + esc(sel.equipo) + ' vs ' + esc(sel.rival) + ' · ' + esc(sel.categorias) + (fl ? ' · <span class="flag">' + esc(fl) + '</span>' : '') + '</div>' +
-      '<div class="mini">' + rows + '</div>' +
-      '<details><summary>Por qué</summary><p>' + esc(sel.por_que) + '</p>' +
-        (pq.a_sube ? '<p><strong>A favor:</strong> ' + esc(pq.a_sube) + '</p>' : '') +
-        (pq.b_frena ? '<p><strong>En contra:</strong> ' + esc(pq.b_frena) + '</p>' : '') +
-        (pq.c_regla ? '<p><strong>Regla:</strong> ' + esc(pq.c_regla) + '</p>' : '') +
-        (sel.riesgo ? '<p><strong>Riesgo:</strong> ' + esc(sel.riesgo) + '</p>' : '') +
-      '</details>' +
-      '<button type="button" class="open" data-open="' + sel.player_id + '">Abrir ficha y mover la línea</button>' +
-      '</div>';
+    const all = D.partidos.flatMap(g => g.favoritos);
+    const alta = all.filter(f => f.confianza === 'Alta'), media = all.filter(f => f.confianza !== 'Alta');
+    const sinFav = D.partidos.filter(g => !g.favoritos.length).map(g => g.partido);
+    $('fav-sub').textContent = all.length + ' favoritos en ' + (D.partidos.length - sinFav.length) + ' de ' + D.partidos.length + ' partidos (' + alta.length +
+      ' de confianza alta). Regla: ajuste total de +4% o más y 50% o más de superar su propio promedio. Sin favorito claro: ' + (sinFav.join(', ') || 'ninguno') + '.';
+    $('fav-all').innerHTML =
+      '<div class="favs-head"><h3>Confianza alta</h3></div><div class="fav-list">' + alta.map(f => favCard(f, true)).join('') + '</div>' +
+      '<div class="favs-head" style="margin-top:18px"><h3>Confianza media</h3></div><div class="fav-list">' + media.map(f => favCard(f, true)).join('') + '</div>';
+    $('cambios').innerHTML = '<thead><tr><th>Jugador</th><th>Antes</th><th>Ahora</th><th>Por qué</th></tr></thead><tbody>' +
+      D.cambios.map(c => '<tr><td>' + esc(c.jugador) + '</td><td>' + esc(c.antes) + '</td><td>' + esc(c.ahora) + '</td><td>' + esc(c.motivo) + '</td></tr>').join('') + '</tbody>';
+    $('fuentes').innerHTML = M.fuentes_lesiones.map(f => '<span>' + esc(f.nombre) + ': <a href="' + esc(f.url) + '">' + esc(f.url.replace(/^https?:\/\//, '').slice(0, 70)) + '</a></span>').join('');
   }
 
   /* ---------------- navegación ---------------- */
   function route() {
     const h = location.hash.replace('#', '');
-    if (h === 'favorables') state.view = 'favorables';
+    if (h === 'favoritos' || h === 'favorables') state.view = 'favoritos';
     else if (h.startsWith('jugador-') && byId.has(h.slice(8))) { state.view = 'partidos'; selectPlayer(h.slice(8), false); }
     else state.view = 'partidos';
     $('view-partidos').hidden = state.view !== 'partidos';
-    $('view-favorables').hidden = state.view !== 'favorables';
+    $('view-favoritos').hidden = state.view !== 'favoritos';
     $('tab-partidos').setAttribute('aria-current', state.view === 'partidos' ? 'page' : 'false');
-    $('tab-favorables').setAttribute('aria-current', state.view === 'favorables' ? 'page' : 'false');
+    $('tab-favoritos').setAttribute('aria-current', state.view === 'favoritos' ? 'page' : 'false');
   }
   function selectPlayer(pid, scroll) {
     const j = byId.get(pid); if (!j) return;
@@ -591,12 +655,11 @@ footer .wrap { display: grid; gap: 4px; }
     renderGames(); renderRoster(); renderFicha();
     if (scroll) $('ficha').scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
   }
-
   document.addEventListener('click', e => {
     const t = e.target.closest('[data-game],[data-pid],[data-pos],[data-stat],[data-open]');
     if (!t) return;
     if (t.dataset.game) { state.game = t.dataset.game; state.q = ''; $('q').value = ''; renderGames(); renderRoster(); }
-    else if (t.dataset.pid) { selectPlayer(t.dataset.pid, matchMedia('(max-width: 900px)').matches); history.replaceState(null, '', '#jugador-' + t.dataset.pid); }
+    else if (t.dataset.pid) { selectPlayer(t.dataset.pid, true); history.replaceState(null, '', '#jugador-' + t.dataset.pid); }
     else if (t.dataset.pos) { state.pos = t.dataset.pos; renderRoster(); }
     else if (t.dataset.stat) { state.statKey = t.dataset.stat; renderFicha(); const b = $('st-' + t.dataset.stat); if (b) b.focus(); }
     else if (t.dataset.open) { state.q = ''; $('q').value = ''; location.hash = '#jugador-' + t.dataset.open; setTimeout(() => $('ficha').scrollIntoView({ block: 'start' }), 0); }
@@ -606,9 +669,8 @@ footer .wrap { display: grid; gap: 4px; }
 
   function start(saved) {
     if (saved && saved.lines) Object.assign(state, saved);
-    if (!state.pid) {
-      const first = D.selecciones.find(s => s.confianza === 'Alta');
-      state.pid = first ? first.player_id : D.jugadores[0].player_id;
+    if (!state.pid || !byId.has(state.pid)) {
+      state.pid = firstFav ? firstFav.player_id : D.jugadores[0].player_id;
       state.game = byId.get(state.pid).partido;
     }
     renderGames(); renderRoster(); renderFicha(); renderFav(); route();
