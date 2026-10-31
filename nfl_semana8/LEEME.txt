@@ -1,0 +1,80 @@
+NFL 2026 · SEMANA 8 · PAQUETE DE DATOS (Excel + data.json)
+Datos al viernes 30-oct-2026, 17:10 hora Monterrey (UTC-6). PRIMERA CORRIDA.
+Análisis de patrones, no garantía ni recomendación de apuesta. Solo mayores de 18 años.
+
+ARCHIVOS
+- NFL_2026_S8_matchups.xlsx : libro con fórmulas vivas (Arial; azul = dato de entrada, verde = vínculo a otra hoja, negro = fórmula).
+- data.json                 : los mismos números que el Excel (verificado por código; ver mensaje de entrega).
+- LEEME.txt                 : este archivo.
+
+FUENTES (resumen; detalle en la hoja "Fuentes")
+- ESPN NO fue accesible desde el entorno (red bloqueada). Fuente principal: nflverse (datos oficiales de juego de la NFL:
+  calendario/resultados, estadísticas por jugador, play-by-play, lesiones, rosters, snaps). Marcadores verificados contra el
+  play-by-play: 108/108 juegos coinciden.
+- Traspasos recientes (Nelson, Buckner, Simmons): noticias AP/ESPN/NFL.com vistas por búsqueda web.
+- Probabilidad de victoria: n/d. Tier de línea: proxy propio (no PFN).
+
+FÓRMULA
+  produccion_pj  = yardas de la métrica / PJ
+                   QB = yardas de pase por titularidad (solo juegos con 15+ intentos)
+                   RB = yardas por tierra por juego; WR y TE = yardas recibidas por juego
+                   PJ (no QB) = máx(juegos con estadística, juegos con snaps ofensivos)
+  rival_permite  = yardas por juego que la defensa rival permitió a esa posición (suma de lo producido por jugadores de esa
+                   posición contra ella / juegos de esa defensa). RB incluye FB. QB = yardas de pase brutas de QBs.
+  rank           = 1..32, 1 = la defensa que MÁS permite (matchup más blando). Lectura: 1-10 Favorable, 11-21 Neutral, 22-32 Difícil.
+  dureza_calendario = promedio, sobre los juegos en que el jugador registró estadística (QB: titularidades), de lo que cada rival
+                   permitía a esa posición SIN contar el juego contra el equipo del jugador (leave-one-out; mejora documentada:
+                   evita que la propia producción del jugador haga ver "blando" a su rival y doble-penalice).
+  promedio_liga  = total permitido a la posición / total de juegos de defensa (todas las 32 defensas).
+  proyeccion     = produccion_pj × (1 + w × (rival_permite / dureza_calendario − 1)),  w = 0.6 (celda editable Resumen!C4, nombre "w").
+                   w < 1 porque lo que permite cada defensa depende a su vez de a quién enfrentó y las muestras son de 6-8 juegos.
+  cambio         = proyeccion / produccion_pj − 1
+
+REGLAS DE INCLUSIÓN (columnas R1-R4 en "Todos los evaluados", calculadas con fórmula)
+  Volumen mínimo: QB ≥ 190 yds/j; RB ≥ 45; WR ≥ 42 y ≥ 5 targets/j; TE ≥ 30.
+  R1 base     : cambio ≥ +10% y volumen mínimo.
+  R2 ampliada : rank ≤ 10, cambio ≥ +5% y producción ≥ 1.5× el umbral (WR con ≥ 5 targets/j). Agregada para no excluir a
+                receptores de volumen alto en matchups favorables que quedan entre +5% y +10%.
+  R3 RB de favorito claro (tope MEDIA): RB, brecha de diferencial de puntos por juego (equipo − rival) ≥ 5, rank ≤ 10,
+                cambio ≥ 0 y ≥ 60 yds/j.
+  R4 volumen élite (tope MEDIA): producción ≥ 2× el umbral, cambio ≥ +5% y rank ≤ 21.
+  Además: estatus sano (se descarta a quien no practicó, está en reserva o no juega desde hace semanas sin regreso confirmado).
+
+CONFIANZA
+  ALTA  : solo si el modelo da ventaja (cambio ≥ +5%, o rank ≤ 10 con cambio ≥ 0) Y además acompañan volumen, guion y salud del
+          equipo propio. Condición necesaria, no suficiente.
+  MEDIA : buen volumen o guion con matchup neutral, o ventaja del modelo con algo que la frena (reparto, muestra corta, QB
+          suplente o inestable, línea débil, lesión en curso, regreso de lesión). R3 y R4 tienen tope MEDIA.
+  Regla de guion (agregada tras la auditoría): QB/WR/TE de un favorito claro (brecha de diferencial ≥ +10 pts/j) → el guion
+          frena → máximo MEDIA.
+  Cada selección trae su bloque "Por qué ALTA/MEDIA": (a) qué la sube, (b) qué la frena, (c) qué regla se aplicó.
+
+CAMPOS DE data.json
+  metadatos            : temporada, semana, tipo_corrida, datos_al, peso_w, zona_horaria, avisos[], promedio_liga_yds_por_juego{QB,RB,WR,TE}, formula.
+  partidos[]           : partido, visitante, local, fecha_hora_monterrey, hora_et, estadio, espn_game_id, record_visitante,
+                         record_local, prob_victoria ("n/d"), decision, por_que, que_lo_puede_romper, conclusion, selecciones[].
+  defensas{equipo}     : pj, pts_permitidos_pj, rank_pts, {QB,RB,WR,TE}_yds_pj, {..}_rank, {..}_td_pj, {..}_td_rank.
+  calendario_jugado{equipo}: juegos[] (semana, condicion L/V, rival, pf, pc, resultado G/P/E), dureza{pos}, dureza_vs_liga{pos}
+                         (positivo = rivales más blandos que la liga).
+  equipos{equipo}      : qb, qb_base (cómo se verificó), tier (proxy), sack/hit (tasas de captura y golpe al QB),
+                         rsucc (éxito en carreras diseñadas), stuff (tasa de tapones), inj_off/inj_def (no practicó/limitado jue
+                         29-oct), trades, ir (QB/RB/WR/TE en reserva), situacion, dif_pts_pj, record.
+  evaluados[]          : player_id (gsis), jugador, pos, equipo, rival, partido, pj, semanas, att, cmp, pass_yds, pass_td, ints,
+                         car, rush_yds, rush_td, tgt, rec, rec_yds, rec_td, produccion_pj, rival_permite, rank, lectura,
+                         dureza_calendario, promedio_liga, proyeccion, cambio, tgt_pg, rec_pg, car_pg, lesion, umbral, vol_ok,
+                         dif_pg, dif_rival, gap (brecha de guion), R1, R2, R3, R4, alta_modelo, veredicto, motivo.
+                         (QB: att…pass_td y pj solo de titularidades con 15+ intentos.)
+  selecciones[]        : hora_monterrey, partido, jugador, player_id, equipo, rival, pos, categorias, confianza, rival_permite,
+                         rank, lectura, pts_pj_permitidos_rival, prob_victoria, por_que, por_que_confianza{a_sube, b_frena,
+                         c_regla}, riesgo, tier_linea, situacion_equipo, dureza_calendario, promedio_liga, produccion_pj,
+                         proyeccion, cambio (fracción: 0.138 = +13.8%), regla_inclusion, estado_lesion, pj.
+  conteos              : alta, media, total.
+
+NOTAS
+- Los textos (Por qué, motivos, Cara a cara col. K) se generaron con w = 0.6; si cambias w en el Excel, se recalculan los números
+  y las banderas R1-R4, pero no los textos ni los veredictos.
+- Hoja Auditoría: hallazgos del revisor independiente y correcciones aplicadas.
+- Hojas auxiliares: DefJuego (lo permitido por cada defensa en cada juego; base de todas las fórmulas de defensa y calendario) y
+  SOS_detalle (rival de cada juego de cada jugador evaluado y lo que permitía sin contar ese juego).
+- Recheck: domingo 1-nov 10:40 (Monterrey) con inactivos oficiales (~90 min antes de cada juego). CHI @ SEA (lunes 19:15) quedará
+  "con estatus del viernes"; sus inactivos salen ~17:45 del lunes, hora Monterrey.
