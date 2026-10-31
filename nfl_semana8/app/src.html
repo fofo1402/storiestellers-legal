@@ -200,6 +200,8 @@ footer .wrap { display: grid; gap: 4px; }
   .facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 560px) {
+  .stabs { flex-wrap: wrap; overflow-x: visible; }
+  .stabs button { padding: 10px 12px; }
   .teams { grid-template-columns: 1fr; }
   .brand h1 { font-size: 36px; }
   nav.tabs { margin-left: 0; }

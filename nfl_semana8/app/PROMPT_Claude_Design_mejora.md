@@ -32,7 +32,7 @@ Te adjunto `index.html`: "La Línea · NFL Semana 8", una app en español que ya
 - Encabezado con estado de lesión y si es favorito.
 - Pestañas de estadística según la posición:
   - QB: yardas de pase, pases completos y TD de pase.
-  - RB: yardas por tierra, acarreos, recepciones y TD.
+  - RB: yardas por tierra, acarreos, recepciones, **yardas recibidas** y TD (5 pestañas).
   - WR y TE: yardas recibidas, recepciones y TD.
 - Datos clave: promedio, proyección, lo que permite el rival (ajustado) y el matchup en esa estadística.
 - **Desglose de factores** en 5 cajas: Forma reciente, Rival (ajustado por ambos lados), Línea ofensiva, Compañeros y Ajuste total.
@@ -92,6 +92,7 @@ Revisa también:
 - **Control de la línea:** la idea es la "línea amarilla de primera y diez" de la TV. Hazlo táctil, con marcas de yardas, y con la proyección y la línea justa marcadas.
 - **Gráficas:** limpias, con etiquetas que no choquen y "llegó" contra "no llegó" muy claro.
 - **Celular:** la ficha cómoda con el pulgar (línea y % visibles a la vez) y la lista de partidos recorrible con el dedo.
+- **Pestañas de estadística:** los RB tienen 5 (yardas por tierra, acarreos, recepciones, yardas recibidas y TD) y los demás 3 o 4. Diseña el selector para que 5 pestañas quepan completas y legibles en 390 px, sin cortar texto ni obligar a deslizar de lado. Por ejemplo, en dos filas o como botones segmentados que se acomodan. Los nombres deben verse completos. La lista "Lo que más le gusta al modelo" también puede tener hasta 5 filas: que no empuje el % y la línea fuera de la vista.
 - **Identidad:** conserva el nombre "La Línea", el amarillo de primera y diez y el verde de césped. Refina tipografía, espaciado y jerarquía. Que no parezca plantilla genérica ni casa de apuestas.
 
 Entrégame un solo `index.html` completo, con el mismo primer `<script>` y el mismo bloque de datos sin cambios.
