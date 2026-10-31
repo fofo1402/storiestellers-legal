@@ -7,7 +7,18 @@ from model2 import Ratings, RatingsP, team_shares, vacated, ol_out_cached, _sc
 import pickle
 from status_w8 import *
 D = '/home/user/raw/nflverse/'; O = '/home/user/data/'
-P2 = json.load(open(O + 'model9_params.json'))
+P2 = json.load(open(O + 'model10_params.json'))
+MKT = P2.get('mercado', dict(td=0, yardas=0, spread_tierra=0, spread_pase=0))
+_gm = pd.read_csv(D + 'games.csv', low_memory=False); _gm = _gm[(_gm.season == 2026) & _gm.total_line.notna()]
+IMP = {}; SPR = {}
+for _r in _gm.itertuples():
+    IMP[(_r.game_id, _r.home_team)] = (_r.total_line + _r.spread_line) / 2; IMP[(_r.game_id, _r.away_team)] = (_r.total_line - _r.spread_line) / 2
+    SPR[(_r.game_id, _r.home_team)] = _r.spread_line; SPR[(_r.game_id, _r.away_team)] = -_r.spread_line
+_w8 = _gm[_gm.week == 8]
+IMP8 = {}; SPR8 = {}
+for _r in _w8.itertuples():
+    IMP8[_r.home_team] = (_r.total_line + _r.spread_line) / 2; IMP8[_r.away_team] = (_r.total_line - _r.spread_line) / 2
+    SPR8[_r.home_team] = _r.spread_line; SPR8[_r.away_team] = -_r.spread_line
 USO_U, USO_K = P2['uso']['peso'], P2['uso']['K']
 USE = {'receiving_yards': ('targets', 'receiving_yards'), 'receptions': ('targets', 'receptions'), 'rushing_yards': ('carries', 'rushing_yards'),
        'passing_yards': ('attempts', 'passing_yards'), 'completions': ('attempts', 'completions')}
@@ -162,6 +173,9 @@ for x in POOL.itertuples():
         ht, hc = (wh[:, None] * hv).sum(0)
     else: ht = hc = 0.0
     dvt = vt_now - ht; dvc = vc_now - hc
+    hi = [IMP.get((gg['game_id'], TEAM_OF_GAME[(gg['game_id'], gg['opp'])])) for gg in g]; hi = [v for v in hi if v is not None]
+    hs = [SPR.get((gg['game_id'], TEAM_OF_GAME[(gg['game_id'], gg['opp'])])) for gg in g]; hs = [v for v in hs if v is not None]
+    imp_r = (IMP8[x.team] / np.mean(hi)) if hi else 1.0; dspr = (SPR8[x.team] - np.mean(hs)) if hs else 0.0
     stats_ = []
     for key, c, label, kind in STATS[x.pos]:
         d = P[key]; mu0 = d['mu']
@@ -193,7 +207,10 @@ for x in POOL.itertuples():
             else: lv = TDR[x.pos] * vv('targets')
             bc = mu0 * ffo
             if bc > 0: fuso = ((1 - TDB) * bc + TDB * lv) / bc
-        f = ffo * fuso * fr * fo * fv; mu = mu0 * f
+        fm = imp_r ** (MKT['td'] if kind == 'td' else MKT['yardas'])
+        if c in ('carries', 'rushing_yards'): fm *= max(0.5, 1 + MKT['spread_tierra'] * dspr / 10)
+        elif c in ('passing_yards', 'completions', 'receptions', 'receiving_yards'): fm *= max(0.5, 1 - MKT['spread_pase'] * dspr / 10)
+        f = ffo * fuso * fm * fr * fo * fv; mu = mu0 * f
         dd = dict(kind='td', mu=mu) if kind == 'td' else dict(kind=kind, mu=mu, sd=(d['sd'] / mu0 * mu * DISP[kind] if mu0 > 0 else 0.0))
         dp = dist_params(dd)
         if dp.get('dist') == 'poisson' and dp['lam'] <= 0: dp = dict(dist='zero')
@@ -202,7 +219,7 @@ for x in POOL.itertuples():
         avg_line = (math.floor(d['mean_raw']) + 0.5) if kind == 'cont' else max(0.5, math.ceil(d['mean_raw'] - 1e-9) - 0.5)
         stats_.append(dict(key=key, etiqueta=label, tipo=kind, media_temporada=d['mean_raw'], proyeccion=mu, de=(d['sd'] / mu0 * mu * DISP[kind] if kind != 'td' and mu0 > 0 else None),
             rival_permite_pj=float(RK[x.pos + '_pg'][c][rival]), rival_indice=dr, rival_rank=rk, lectura=lect, calendario_indice=dfc,
-            f_forma=ffo, f_uso=fuso, ultimos3=[float(v) for v in xs[-3:]], prom_ult3=float(xs[-3:].mean()), f_rival=fr, f_linea=fo, f_companeros=fv, factor_total=f, dist=dp, linea_sugerida=fl,
+            f_forma=ffo, f_uso=fuso, f_mercado=fm, pts_esperados=IMP8[x.team], pts_esperados_hist=(float(np.mean(hi)) if hi else None), ultimos3=[float(v) for v in xs[-3:]], prom_ult3=float(xs[-3:].mean()), f_rival=fr, f_linea=fo, f_companeros=fv, factor_total=f, dist=dp, linea_sugerida=fl,
             prob_superar_promedio=pcal(dp, kind, avg_line), linea_promedio=avg_line,
             registro=[dict(sem=gg['week'], rival=gg['opp'], cond='L' if gg['ha'] == 'vs' else 'V', valor=gg['vals'][c]) for gg in g]))
         for L in sorted({fl, avg_line, round(mu * 0.6, 1), round(mu * 1.4, 1)} if kind != 'td' else {0.5, 1.5}):

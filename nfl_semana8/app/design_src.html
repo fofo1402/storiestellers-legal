@@ -671,6 +671,25 @@ nav.tabs a:not([aria-current="page"]) > span[aria-hidden] { color: inherit; }
 .seg button[aria-pressed="true"] span { background: var(--line); color: var(--line-ink); }
 
 .frank { padding: 0; overflow: hidden; }
+/* ---------- Parlays del modelo ---------- */
+.parlay { background: var(--surface); border: 1px solid var(--rule); border-radius: var(--r-sm); padding: 12px 14px; display: grid; gap: 8px; margin-top: 12px; }
+.parlay.ok { border: 2px solid var(--turf); }
+.parlay-h { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: baseline; justify-content: space-between; }
+.parlay-h b { font-family: var(--font-cond); font-weight: 800; font-size: 16px; letter-spacing: .05em; text-transform: uppercase; }
+.parlay-h .st { font-size: 12px; font-weight: 700; border-radius: 4px; padding: 1px 7px; }
+.parlay.ok .parlay-h .st { background: var(--turf); color: var(--turf-ink); }
+.parlay:not(.ok) .parlay-h .st { border: 1.5px solid var(--rule-strong); color: var(--muted); }
+.legs { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.legs li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; font-size: 14px; align-items: baseline; }
+.legs li small { color: var(--muted); font-size: 12px; }
+.legs li .p { font-weight: 700; }
+.parlay-f { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 13.5px; color: var(--ink-2); border-top: 1px solid var(--rule); padding-top: 8px; }
+.parlay-f b { font-family: var(--font-display); font-size: 22px; color: var(--ink); }
+.parlays-sec { display: grid; gap: 10px; margin-bottom: 14px; }
+.parlays-sec .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 10px; }
+.pick-box { border: 2px solid var(--line); border-radius: var(--r-sm); background: color-mix(in srgb, var(--line) 12%, var(--surface)); padding: 12px 14px; display: grid; gap: 6px; }
+.pick-box h4 { font-family: var(--font-display); font-size: 22px; font-weight: 900; text-transform: uppercase; margin: 0; }
+.pick-box p { margin: 0; font-size: 14px; }
 /* ---------- Top 5 del modelo ---------- */
 .top5 { padding: 0; overflow: hidden; margin-bottom: 14px; border: 2px solid var(--line); }
 .top5-h { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: baseline; padding: 14px 18px 10px; background: color-mix(in srgb, var(--line) 14%, var(--surface)); border-bottom: 1px solid var(--rule); }
@@ -1344,7 +1363,7 @@ footer { background: transparent; }
             (g.mas_cercano ? ' El más cercano: <button type="button" class="linklike" data-pid="' + g.mas_cercano.player_id + '">' + esc(g.mas_cercano.jugador) + '</button> (' +
               pct(g.mas_cercano.prob) + ' en ' + esc(g.mas_cercano.etiqueta.toLowerCase()) + ' ' + esc(viewLine(g.mas_cercano)) + ', ajuste ' + sgn(g.mas_cercano.factor) + ').' : '') + '</p></div>') +
         (g.descartados.length ? '<div class="desc"><div class="h">' + ico('filter') + '<b>Descartados por matchup</b></div>' + g.descartados.map(x => '<span class="x"><b>' + esc(x.jugador) + '</b> — ' + esc(x.motivo) + ' (' + pct(x.prob) + ').</span>').join('') + '</div>' : '') +
-      '</section>';
+      '</section>' + parlayCard(g.parlay, false);
   }
 
   /* ---------------- ficha ---------------- */
@@ -1605,6 +1624,14 @@ footer { background: transparent; }
       '<span class="fr-go" aria-hidden="true">›</span>' +
       '</button></li>';
   }
+  function parlayCard(x, withGame) {
+    if (!x) return '';
+    if (!x.piernas || !x.piernas.length) return '<div class="parlay"><div class="parlay-h"><b>' + (withGame ? 'Parlay · ' + esc(x.partido) : 'Parlay del partido') + '</b><span class="st">Sin parlay</span></div><p class="none" style="margin:0;font-size:14px">No hay dos piernas compatibles que el modelo vea con 50% o más (sin juntar piernas que se estorban).</p></div>';
+    const title = x.tipo === 'Por partido' ? (withGame ? 'Parlay · ' + esc(x.partido) : 'Parlay del partido') : esc(x.tipo) + ' piernas';
+    return '<div class="parlay' + (x.cumple ? ' ok' : '') + '"><div class="parlay-h"><b>' + title + '</b><span class="st">' + (x.cumple ? 'Cumple la expectativa' : (x.flexible ? 'No cumple (piernas más débiles)' : 'No cumple la expectativa')) + '</span></div>' +
+      '<ol class="legs">' + x.piernas.map(l => '<li><span><b>' + esc(l.jugador) + '</b> · ' + esc(l.etiqueta) + ' ' + esc(viewLine(l)) + '<br><small>' + l.pos + ' ' + esc(l.equipo) + (x.tipo !== 'Por partido' ? ' · ' + esc(l.partido) : '') + ' · matchup ' + esc(l.lectura.toLowerCase()) + ' (#' + l.rival_rank + ')' + (l.nota ? ' · ' + esc(l.nota) : '') + '</small></span><span class="p">' + pct(l.prob) + '</span></li>').join('') + '</ol>' +
+      '<div class="parlay-f"><span>Probabilidad de que se cumplan todas: <b>' + pct(x.prob) + '</b></span><span>Cuota justa del modelo: <b>' + fmt(x.cuota_justa, 2) + '</b></span></div></div>';
+  }
   function renderFavList() {
     const all = D.partidos.flatMap(g => g.favoritos);
     const pick = state.favF === 'Todos' ? all : all.filter(f => f.confianza === state.favF);
@@ -1620,7 +1647,16 @@ footer { background: transparent; }
         (T5.excluidos.length ? '<span>Fuera del Top 5 a propósito: ' + T5.excluidos.map(x => esc(x.jugador) + ' (' + pct(x.prob) + ', ' + esc(x.motivo) + ')').join('; ') + '.</span>' : '') +
         '<span>Se recalcula el domingo en la mañana con los inactivos.</span></div></section>' : '';
     const cnt = k => k === 'Todos' ? all.length : all.filter(f => f.confianza === k).length;
-    $('fav-all').innerHTML = top5html +
+    const PL = D.parlays;
+    const E = PL ? PL.eleccion : null;
+    const parlayhtml = PL ? '<section class="parlays-sec" aria-labelledby="pl-h"><div class="frank-h" style="border:0;padding:0"><h3 id="pl-h">Parlays del modelo</h3><span class="hint">' + esc(E.regla) + '</span></div>' +
+      '<div class="pick-box"><h4>Con cuál me quedaría</h4>' +
+        (E.ninguno ? '<p><b>Ninguno cumple la expectativa.</b> Si tuviera que elegir uno, me quedaría con el más probable:</p>' + parlayCard(E.me_quedaria, true)
+          : '<p>' + (E.cumplen.length === 1 ? 'Solo uno cumple la expectativa:' : 'Cumplen la expectativa ' + E.cumplen.length + ', del más probable al menos probable:') + '</p><div class="grid">' + E.cumplen.map(x => parlayCard(x, true)).join('') + '</div>') +
+      '</div>' +
+      '<div class="frank-h" style="border:0;padding:6px 0 0"><h3 style="font-size:20px">Uno por partido</h3><span class="hint">' + esc(PL.nota) + '</span></div>' +
+      '<div class="grid">' + PL.por_partido.map(x => parlayCard(x, true)).join('') + '</div></section>' : '';
+    $('fav-all').innerHTML = top5html + parlayhtml +
       '<div class="fav-toolbar"><div class="seg" role="group" aria-label="Filtrar favoritos por confianza">' +
         ['Todos', 'Alta', 'Media'].map(k => '<button type="button" data-favf="' + k + '" aria-pressed="' + (state.favF === k) + '">' + (k === 'Alta' ? '★ Alta' : k) + ' <span>' + cnt(k) + '</span></button>').join('') +
       '</div><span class="hint">Toca cualquier favorito para abrir su ficha y mover la línea.</span></div>' +

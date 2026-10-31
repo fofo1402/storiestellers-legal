@@ -5,7 +5,7 @@ import json, math
 from collections import defaultdict
 from status_w8 import OUT, QUESTIONABLE, FUENTES, TEAM_NAME, OL_OUT_NOW, PENDING_TEAMS
 O = '/home/user/data/'; E = '/home/user/entrega_semana8/'
-RAW = json.load(open(O + 'props2_raw.json')); P2 = json.load(open(O + 'model9_params.json'))
+RAW = json.load(open(O + 'props2_raw.json')); P2 = json.load(open(O + 'model10_params.json'))
 V2 = json.load(open(O + 'props_data_v6.json'))
 OLD = json.load(open(O + 'props_data_v1.json'))
 players = RAW['players']
@@ -211,7 +211,67 @@ top5 = dict(picks=[dict(rank=i + 1, rol=('Alta' if c['confianza'] == 'Alta' else
                        por_que=(c['por_que'][0] if c['por_que'] else ''), riesgo=c['riesgo']) for i, c in enumerate(top)],
             prob_todos=pall, esperados=sum(c['prob'] for c in top), excluidos=excl,
             nota='Son los 5 con mayor probabilidad según el modelo, no apuestas seguras: cada uno se cumple aprox. 6 a 7 de cada 10 veces y los 5 juntos mucho menos.')
-out = dict(metadatos=meta, partidos=partidos, jugadores=players, cambios=cambios, cambios_v2=cambios_v2, top5=top5)
+# ---------- Parlays del modelo ----------
+# Piernas posibles: jugadores con participación decente, sanos (sin designación), 4+ juegos, estadística con volumen mínimo,
+# matchup no Difícil en esa estadística y >= 55% de superar su promedio. Reglas para no juntar piernas que se estorban:
+# una pierna por jugador; no dos RB del mismo equipo; no un QB con un receptor de su mismo equipo (van juntos y el % real se infla).
+# Probabilidad conjunta = producto (aprox., asumiendo independencia).
+def legs_of(game, flexible=False):
+    out = []
+    for pl in players:
+        if pl['partido'] != game or not pl['stats'] or not decent(pl): continue
+        if flexible:
+            if pl['estado'] == 'Duda' or pl['pj'] < 3: continue
+        elif pl['estado'] != 'OK' or pl['pj'] < 4: continue
+        for s in pl['stats']:
+            if s['dist'].get('dist') == 'zero' or not meaningful(s) or s['lectura'] == 'Difícil' or s['prob_superar_promedio'] < (0.50 if flexible else 0.55): continue
+            out.append(dict(player_id=pl['player_id'], jugador=pl['jugador'], pos=pl['pos'], equipo=pl['equipo'], partido=game, stat=s['key'], etiqueta=s['etiqueta'],
+                            linea=s['linea_promedio'], prob=s['prob_superar_promedio'], lectura=s['lectura'], rival_rank=s['rival_rank'],
+                            nota=('' if (pl['estado'] == 'OK' and pl['pj'] >= 4) else (pl['estado_lesion'] if pl['estado'] != 'OK' else 'muestra corta'))))
+    return out
+def compatible(a, b):
+    if a['player_id'] == b['player_id']: return False
+    if a['equipo'] == b['equipo'] and a['pos'] == 'RB' and b['pos'] == 'RB': return False
+    if a['equipo'] == b['equipo'] and 'QB' in (a['pos'], b['pos']) and a['pos'] != b['pos']: return False
+    return True
+def best_combo(pool, n):
+    pool = sorted(pool, key=lambda l: -l['prob'])[:14]
+    best = None
+    from itertools import combinations
+    for combo in combinations(pool, n):
+        if all(compatible(x, y) for x, y in combinations(combo, 2)):
+            pr = 1.0
+            for l in combo: pr *= l['prob']
+            if best is None or pr > best[0]: best = (pr, list(combo))
+    return best
+UMBRAL = {2: 0.40, 3: 0.27}   # cumple la expectativa: 2 piernas >= 40%; 3 piernas >= 27%
+parlays = []
+for g in partidos:
+    b = best_combo(legs_of(g['partido']), 2); flex = False
+    if not b: b = best_combo(legs_of(g['partido'], True), 2); flex = True
+    if b: parlays.append(dict(tipo='Por partido', partido=g['partido'], piernas=b[1], prob=b[0], cuota_justa=1 / b[0], cumple=(b[0] >= UMBRAL[2] and not flex), flexible=flex))
+    else: parlays.append(dict(tipo='Por partido', partido=g['partido'], piernas=[], prob=None, cuota_justa=None, cumple=False, flexible=True))
+    g['parlay'] = parlays[-1]
+# generales: mejores piernas de partidos distintos (una por partido)
+best_by_game = {}
+for g in partidos:
+    for l in legs_of(g['partido']):
+        if g['partido'] not in best_by_game or l['prob'] > best_by_game[g['partido']]['prob']: best_by_game[g['partido']] = l
+cross = sorted(best_by_game.values(), key=lambda l: -l['prob'])
+gen = []
+for n in (2, 3):
+    if len(cross) >= n:
+        pr = 1.0
+        for l in cross[:n]: pr *= l['prob']
+        gen.append(dict(tipo=f'General de {n}', partido='Varios partidos', piernas=cross[:n], prob=pr, cuota_justa=1 / pr, cumple=pr >= UMBRAL[n]))
+cands = [x for x in parlays if x['piernas']] + gen
+ok = sorted([x for x in cands if x['cumple']], key=lambda x: -x['prob'])
+mejor = max(cands, key=lambda x: x['prob']) if cands else None
+eleccion = dict(cumplen=ok, ninguno=(len(ok) == 0), me_quedaria=(None if ok else mejor),
+                regla='Cumple la expectativa si el parlay de 2 tiene 40% o más (o el de 3, 27% o más) según el modelo.')
+parlay_info = dict(por_partido=parlays, generales=gen, eleccion=eleccion,
+                   nota='Un parlay no es seguro: todas las piernas tienen que cumplirse. La probabilidad conjunta asume que las piernas son independientes; dentro de un mismo partido puede variar. La cuota justa es 1 / probabilidad: si la casa paga menos que eso, el modelo no le ve valor.')
+out = dict(metadatos=meta, partidos=partidos, jugadores=players, cambios=cambios, cambios_v2=cambios_v2, top5=top5, parlays=parlay_info)
 json.dump(out, open(E + 'props_data.json', 'w'), ensure_ascii=False, separators=(',', ':'))
 json.dump(RAW['tests'], open(E + 'casos_prueba.json', 'w'), ensure_ascii=False, indent=0)
 nf = sum(len(v) for v in fav.values())
